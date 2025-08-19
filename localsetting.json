@@ -1,0 +1,9 @@
+{
+    "IsEncrypted": false,
+    "Values": {
+      "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+      "FUNCTIONS_WORKER_RUNTIME": "python",
+      "AIProjectConnString": "eastus2.api.azureml.ms;0e723583-92a1-465a-8cf6-e47bc860007a;st_resources_dashboards_1;st-valucraft-test1",
+      "ThreadTimeout": 30
+    }
+  }
