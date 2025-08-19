@@ -1,108 +1,136 @@
 from pptx import Presentation
-from pptx.enum.text import MSO_AUTO_SIZE
-from utils import (_find_shape_with_token, _add_section_header, _add_bullet, 
-                  _fmt_currency, _parse_number, _fmt_billions_usd, _parse_percent)
+from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
+from pptx.dml.color import RGBColor
+from pptx.util import Pt
+from utils import estimate_row_height
+from config import EMU_PER_PT
 
 
-def fill_industry_research(prs: Presentation, payload: dict, token="{{IndustryResearch}}"):
+def fill_industry_slides(prs: Presentation, slide, payload: dict):
     """
-    Fills the IndustryResearch section with industry-specific data processing and formatting.
-    
-    Args:
-        prs: PowerPoint Presentation object
-        payload: Dictionary containing industry research data
-        token: Token to find and replace in the presentation
+    Reemplaza {{IndustryResearch}} en `slide` con múltiples tablas según payload:
+    - Usa `payload_data['title']` como Título de slide.
+    - Usa `payload_data['headers']` como columnas.
+    - Usa `payload_data['rows']` como datos de fila.
+    - Corta en varias slides cuando excede espacio disponible.
     """
-    slide, shape = _find_shape_with_token(prs, token)
-    if not shape:
+    token = "{{IndustryResearch}}"
+    # localiza y elimina placeholder
+    pos = None    
+    for shape in slide.shapes:
+        if not shape.has_text_frame:
+            continue
+        tf = shape.text_frame
+
+        if token in tf.text:
+            pos = (shape.left, shape.top, shape.width, shape.height)
+            slide.shapes._spTree.remove(shape._element)
+            break
+    if pos is None:
+        return
+    left, top, width, height = pos
+
+    # Establece título de la slide desde payload
+    if slide.shapes.title:
+        slide.shapes.title.text = payload.get("title", "")
+
+    headers = payload.get("headers", [])
+    rows    = payload.get("rows", [])
+    if not headers or not rows:
         return
 
-    tf = shape.text_frame
-    tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-    tf.clear()
+    # alturas en puntos
+    total_pt   = height / EMU_PER_PT
+    header_pt  = 24
+    content_pt = total_pt - header_pt
+    line_pt    = 12
 
-    # Industry-specific data processing
-    for key, val in payload.items():
-        if key == "Industry Name":
-            continue  # Industry name might be handled separately
+    keys = headers
+    # calcula ancho de columna en pt para wrapping
+    width_pt     = width / EMU_PER_PT
+    col_width_pt = width_pt / len(keys)
 
-        if isinstance(val, (dict, list)):
-            _add_section_header(tf, f"{key}:")
-            
-            if isinstance(val, dict):
-                # Process industry dictionary data
-                for k2, v2 in val.items():
-                    if isinstance(v2, list):
-                        _add_bullet(tf, f"{k2}:", level=0, size=14)
-                        for item in v2:
-                            if isinstance(item, dict):
-                                # Format industry metrics and data
-                                formatted_items = []
-                                for kk, vv in item.items():
-                                    formatted_value = _format_industry_value(kk, vv)
-                                    formatted_items.append(f"{kk}: {formatted_value}")
-                                line = "; ".join(formatted_items)
-                                _add_bullet(tf, line, level=1, size=12)
-                            else:
-                                _add_bullet(tf, str(item), level=1, size=12)
-                    elif isinstance(v2, dict):
-                        _add_bullet(tf, f"{k2}:", level=0, size=14)
-                        for kk, vv in v2.items():
-                            formatted_value = _format_industry_value(kk, vv)
-                            _add_bullet(tf, f"{kk}: {formatted_value}", level=1, size=12)
-                    else:
-                        formatted_value = _format_industry_value(k2, v2)
-                        _add_bullet(tf, f"{k2}: {formatted_value}", level=0, size=14)
-            else:
-                # Process industry list data
-                for item in val:
-                    if isinstance(item, dict):
-                        formatted_items = []
-                        for kk, vv in item.items():
-                            formatted_value = _format_industry_value(kk, vv)
-                            formatted_items.append(f"{kk}: {formatted_value}")
-                        line = "; ".join(formatted_items)
-                        _add_bullet(tf, line, level=1, size=12)
-                    else:
-                        _add_bullet(tf, str(item), level=1, size=12)
-        else:
-            # Process simple industry values
-            formatted_value = _format_industry_value(key, val)
-            _add_bullet(tf, f"🏭 {key}: {formatted_value}", level=0, size=14)
+    # calcular altura estimada de cada fila
+    row_heights = [
+        estimate_row_height(e, keys, line_pt, col_width_pt)
+        for e in rows
+    ]
 
+    # particionar filas en trozos que quepan en content_pt
+    chunks = []
+    i, n = 0, len(rows)
+    while i < n:
+        used, j = 0.0, i
+        while j < n and used + row_heights[j] <= content_pt:
+            used += row_heights[j]
+            j += 1
+        # al menos una fila
+        if j == i:
+            j = i + 1
+        chunks.append(rows[i:j])
+        i = j
 
-def _format_industry_value(key: str, value) -> str:
-    """
-    Formats industry-specific values with appropriate formatting.
-    
-    Args:
-        key: The key/field name
-        value: The value to format
-        
-    Returns:
-        Formatted string value
-    """
-    key_lower = key.lower()
-    
-    # Format monetary values
-    if any(term in key_lower for term in ['revenue', 'income', 'profit', 'value', 'market size', 'cap']):
-        parsed_num = _parse_number(value)
-        if parsed_num is not None and parsed_num > 1000000:
-            return _fmt_billions_usd(parsed_num)
-        elif parsed_num is not None:
-            return _fmt_currency(parsed_num)
-    
-    # Format percentages
-    if any(term in key_lower for term in ['percent', 'rate', 'growth', 'margin', 'share']):
-        parsed_percent = _parse_percent(value)
-        if parsed_percent is not None:
-            return f"{parsed_percent:.2f}%"
-    
-    # Format employee counts
-    if any(term in key_lower for term in ['employees', 'workforce', 'staff']):
-        parsed_num = _parse_number(value)
-        if parsed_num is not None:
-            return f"{int(parsed_num):,} employees"
-    
-    # Default formatting
-    return str(value)
+    layout = slide.slide_layout
+    for idx, chunk in enumerate(chunks):
+        target = slide if idx == 0 else prs.slides.add_slide(layout)
+        if idx > 0 and target.shapes.title:
+            target.shapes.title.text += " (cont.)"
+
+        rows_count, cols_count = len(chunk) + 1, len(keys)
+        tbl = target.shapes.add_table(
+            rows_count, cols_count, left, top, width, height
+        ).table
+
+        # fila de encabezado
+        tbl.rows[0].height = Pt(header_pt)
+        for col in tbl.columns:
+            col.width = width // cols_count
+        for c, h in enumerate(keys):
+            cell = tbl.cell(0, c)
+            cell.text = h
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = RGBColor(0, 70, 122)
+            para = cell.text_frame.paragraphs[0]
+            para.alignment = PP_ALIGN.CENTER
+            for run in para.runs:
+                run.font.size = Pt(14)
+                run.font.bold = True
+                run.font.color.rgb = RGBColor(255, 255, 255)
+            cell.text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+
+        # filas de datos
+        for r, entry in enumerate(chunk, start=1):
+            for c, h in enumerate(keys):
+                cell = tbl.cell(r, c)
+                tf = cell.text_frame
+                tf.clear()
+                tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+                val = entry.get(h, "")
+                if isinstance(val, list) and val and isinstance(val[0], dict):
+                    for item in val:
+                        line = "; ".join(f"{k}: {v}" for k, v in item.items())
+                        p = tf.add_paragraph()
+                        p.text = line
+                        p.alignment = PP_ALIGN.LEFT
+                        for run in p.runs:
+                            run.font.size = Pt(10)
+                elif isinstance(val, list):
+                    for it in val:
+                        p = tf.add_paragraph()
+                        p.text = f"• {it}"
+                        p.alignment = PP_ALIGN.LEFT
+                        for run in p.runs:
+                            run.font.size = Pt(10)
+                elif isinstance(val, str) and "" in val:
+                    for line in val.splitlines():
+                        p = tf.add_paragraph()
+                        p.text = line
+                        p.alignment = PP_ALIGN.LEFT
+                        for run in p.runs:
+                            run.font.size = Pt(10)
+                else:
+                    p = tf.add_paragraph()
+                    p.text = str(val)
+                    p.alignment = PP_ALIGN.LEFT
+                    for run in p.runs:
+                        run.font.size = Pt(10)

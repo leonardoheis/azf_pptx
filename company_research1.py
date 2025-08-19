@@ -1,6 +1,7 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
-from utils import _find_shape_with_token, _add_section_header, _add_bullet
+from utils import _find_shape_with_token, _add_section_header, _add_bullet, _replace_company_name_everywhere
+import json
 
 
 def fill_company_research1(prs: Presentation, payload: dict, token="{{CompanyResearch1}}"):
@@ -58,3 +59,19 @@ def fill_company_research1(prs: Presentation, payload: dict, token="{{CompanyRes
         else:
             # simple value
             _add_bullet(tf, f"{key}: {val}", level=0, size=14)
+            
+# --------------------------------------------------------------------
+# CompanyName desde JSON externo
+# --------------------------------------------------------------------
+def _get_company_name_from_json(path: str) -> str:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    # Se espera un {"data": [ { "Company Name": "..." , ... } ]}
+    try:
+        return data["data"][0].get("Company Name", "").strip()
+    except Exception:
+        return ""            
+    
+def fill_company_name_from_json(prs: Presentation, company_json_path: str):
+    name = _get_company_name_from_json(company_json_path) or "Company"
+    _replace_company_name_everywhere(prs, name)
