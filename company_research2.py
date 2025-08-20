@@ -9,7 +9,6 @@ from utils import _find_shape_with_token, _norm, _parse_number, _fmt_billions_us
 def fill_company_research2(
     prs: Presentation,
     payload: dict,
-    token="{{CompanyResearch2}}",
     company_name: str | None = None
 ):
     """
@@ -17,6 +16,8 @@ def fill_company_research2(
     Detecta Revenue, Industry Avg Gross Margin, Company Gross Margin, Employee Count.
     Si falta algún dato, lo omite o degrada el texto.
     """
+    token="{{CompanyResearch2}}"
+    
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
         return

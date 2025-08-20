@@ -6,7 +6,10 @@ from utils import _find_shape_with_token, _add_section_header, _add_bullet, _nor
 # --------------------------------------------------------------------
 # Función 3 (genérica): {{CompanyResearch3}} -> bullets jerárquicos + links
 # --------------------------------------------------------------------
-def fill_company_research3(prs: Presentation, payload: dict, token="{{CompanyResearch3}}"):
+def fill_company_research3(prs: Presentation, payload: dict):
+    
+    token="{{CompanyResearch3}}"
+    
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
         return

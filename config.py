@@ -1,17 +1,17 @@
 import os
-import glob
 from datetime import datetime
+from pptx.dml.color import RGBColor
 
 # Azure Storage Configuration
-STORAGE_CONN_STRING = os.environ.get("AzureWebJobsStorage", "")
+AZ_STORAGE_CONN_STRING = os.environ.get("AzureWebJobsStorage", "")
 
 # Blob Storage Configuration
 # Set this environment variable in your Azure Function app settings:
 # BLOB_CONTAINER_NAME: Name of the container to store PowerPoint files (default: "pptx-out")
-CONTAINER_NAME = os.environ.get("BLOB_CONTAINER_NAME", "pptx-out")
+AZ_BLOB_CONTAINER_NAME = os.environ.get("BLOB_CONTAINER_NAME", "pptx-out")
 
-# Table Configuration
-TABLE_NAME = "pptxactivity"
+# Azure Blob Table Storage Name
+AZ_BLOB_TABLE_NAME = "pptxactivity"
 
 # Thread Configuration
 THREAD_TIMEOUT_MINUTES = int(os.environ.get("ThreadTimeout", "30"))
@@ -19,7 +19,23 @@ THREAD_TIMEOUT_MINUTES = int(os.environ.get("ThreadTimeout", "30"))
 # Conversion factor: 1 pt = 12700 EMU
 EMU_PER_PT = 12700
 
-TEMPLATE = "templates/pantilla.pptx"
+INPUT_TEMPLATE = "templates/pantilla.pptx"
+
+TABLE_HEADER_HEIGHT_PT = 24
+TABLE_LINE_HEIGHT_PT = 12
+
+# Table styling colors
+TABLE_HEADER_BG_COLOR = RGBColor(0, 70, 122)
+TABLE_HEADER_TEXT_COLOR = RGBColor(255, 255, 255)
+
+TABLE_PARAGRAPH_FONT_SIZE_PT = 14
+
+DICT_LIST_CONTENT_FONT_SIZE_PT = 10
+SIMPLE_LIST_CONTENT_FONT_SIZE_PT = 10
+MULTILINE_CONTENT_FONT_SIZE_PT = 10
+SIMPLE_CONTENT_FONT_SIZE_PT = 10
+
+
 
 def get_next_output_filename():
     """

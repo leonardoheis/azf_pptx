@@ -4,7 +4,7 @@ from utils import _find_shape_with_token, _add_section_header, _add_bullet, _rep
 import json
 
 
-def fill_company_research1(prs: Presentation, payload: dict, token="{{CompanyResearch1}}"):
+def fill_company_research1(prs: Presentation, payload: dict):
     """
     Fills the CompanyResearch1 section with bullet points from objects/lists.
     
@@ -13,6 +13,8 @@ def fill_company_research1(prs: Presentation, payload: dict, token="{{CompanyRes
         payload: Dictionary containing company research data
         token: Token to find and replace in the presentation
     """
+    token = "{{CompanyResearch1}}"
+    
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
         return

@@ -16,7 +16,7 @@ from azure.data.tables import TableServiceClient
 from azure.storage.blob import BlobServiceClient
 from datetime import datetime, timedelta, timezone
 
-from config import STORAGE_CONN_STRING, TABLE_NAME, TEMPLATE, get_next_output_filename, CONTAINER_NAME
+from config import AZ_STORAGE_CONN_STRING, AZ_BLOB_TABLE_NAME, INPUT_TEMPLATE, get_next_output_filename, AZ_BLOB_CONTAINER_NAME
 from company_research1 import fill_company_research1, fill_company_name_from_json
 from company_research2 import fill_company_research2
 from company_research3 import fill_company_research3
@@ -24,12 +24,12 @@ from industry_research import fill_industry_slides
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
-table_service = TableServiceClient.from_connection_string(conn_str=STORAGE_CONN_STRING)
-table_client = table_service.get_table_client(table_name=TABLE_NAME)
+table_service = TableServiceClient.from_connection_string(conn_str=AZ_STORAGE_CONN_STRING)
+table_client = table_service.get_table_client(table_name=AZ_BLOB_TABLE_NAME)
 
 # Initialize Blob Service Client
-blob_service_client = BlobServiceClient.from_connection_string(conn_str=STORAGE_CONN_STRING)
-container_client = blob_service_client.get_container_client(container=CONTAINER_NAME)
+blob_service_client = BlobServiceClient.from_connection_string(conn_str=AZ_STORAGE_CONN_STRING)
+container_client = blob_service_client.get_container_client(container=AZ_BLOB_CONTAINER_NAME)
 
 # Asegura la tabla exista
 try:
@@ -138,7 +138,7 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
             # Generate a fresh output filename for this execution
             current_output_file = get_next_output_filename()
             
-            prs = Presentation(TEMPLATE)
+            prs = Presentation(INPUT_TEMPLATE)
             
             fill_company_name_from_json(prs, company_data1)
             
@@ -158,10 +158,10 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
             # Upload to blob storage
             blob_client.upload_blob(pptx_buffer.getvalue(), overwrite=True)
             
-            print(f"POC generada en Azure Blob Storage: {CONTAINER_NAME}/{current_output_file}")
-            logging.info(f"Presentation saved to blob storage: {CONTAINER_NAME}/{current_output_file}")
+            print(f"POC generada en Azure Blob Storage: {AZ_BLOB_CONTAINER_NAME}/{current_output_file}")
+            logging.info(f"Presentation saved to blob storage: {AZ_BLOB_CONTAINER_NAME}/{current_output_file}")
             
-            processed_data["output_location"] = f"https://{blob_service_client.account_name}.blob.core.windows.net/{CONTAINER_NAME}/{current_output_file}"
+            processed_data["output_location"] = f"https://{blob_service_client.account_name}.blob.core.windows.net/{AZ_BLOB_CONTAINER_NAME}/{current_output_file}"
             
         except Exception as e:
             logging.error(f"Error processing data: {str(e)}")
@@ -198,7 +198,7 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
                 "output_file": {
                     "filename": current_output_file,
                     "blob_path": current_output_file,
-                    "container": CONTAINER_NAME,
+                    "container": AZ_BLOB_CONTAINER_NAME,
                     "full_url": processed_data.get("output_location", "Not available")
                 }
             }),
