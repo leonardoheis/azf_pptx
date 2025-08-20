@@ -60,41 +60,41 @@ def fill_industry_slides(prs: Presentation, slide, payload: dict):
         _populate_table_data(table, chunk, headers)
 
 
-    # particionar filas en trozos que quepan en content_pt
-    def _partition_rows_into_chunks(rows: list, row_heights: list, available_height_pt: float) -> list:
-        """
-        Partitions rows into chunks that fit within the available height.
+# particionar filas en trozos que quepan en content_pt
+def _partition_rows_into_chunks(rows: list, row_heights: list, available_height_pt: float) -> list | None:
+    """
+    Partitions rows into chunks that fit within the available height.
+    
+    Args:
+        rows: List of row data
+        row_heights: List of estimated heights for each row
+        available_height_pt: Available height in points
         
-        Args:
-            rows: List of row data
-            row_heights: List of estimated heights for each row
-            available_height_pt: Available height in points
-            
-        Returns:
-            List of row chunks that fit within the height constraint
-        """
-        chunks = []
-        current_index = 0
-        total_rows = len(rows)
+    Returns:
+        List of row chunks that fit within the height constraint
+    """
+    chunks = []
+    current_index = 0
+    total_rows = len(rows)
+    
+    while current_index < total_rows:
+        chunk_height_used = 0.0
+        chunk_end_index = current_index
         
-        while current_index < total_rows:
-            chunk_height_used = 0.0
-            chunk_end_index = current_index
-            
-            # Add rows to chunk while they fit within available height
-            while (chunk_end_index < total_rows and 
-                   chunk_height_used + row_heights[chunk_end_index] <= available_height_pt):
-                chunk_height_used += row_heights[chunk_end_index]
-                chunk_end_index += 1
-            
-            # Ensure at least one row is included in each chunk
-            if chunk_end_index == current_index:
-                chunk_end_index = current_index + 1
-            
-            chunks.append(rows[current_index:chunk_end_index])
-            current_index = chunk_end_index
+        # Add rows to chunk while they fit within available height
+        while (chunk_end_index < total_rows and 
+                chunk_height_used + row_heights[chunk_end_index] <= available_height_pt):
+            chunk_height_used += row_heights[chunk_end_index]
+            chunk_end_index += 1
         
-        return chunks
+        # Ensure at least one row is included in each chunk
+        if chunk_end_index == current_index:
+            chunk_end_index = current_index + 1
+        
+        chunks.append(rows[current_index:chunk_end_index])
+        current_index = chunk_end_index
+    
+    return chunks
 
 def _find_and_remove_placeholder(slide, token: str) -> tuple[int, int, int, int] | None:
     """
