@@ -12,4 +12,9 @@ azure-identity~=1.20.0
 azure-data-tables== 12.7.0
 
 python-pptx>=1.0.2
+Pillow>=10.0.0
+lxml>=5.0.0
 azure-storage-blob>=12.26.0
+
+pytest==8.4.3
+pytest-mock==3.11.0

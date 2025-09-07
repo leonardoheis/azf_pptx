@@ -3,7 +3,7 @@ from datetime import datetime
 from pptx.dml.color import RGBColor
 
 # Azure Storage Configuration
-AZ_STORAGE_CONN_STRING = os.environ.get("AzureWebJobsStorage", "")
+AZ_STORAGE_CONN_STRING = os.environ.get("AZ_STORAGE_CONN_STRING") or os.environ.get("AzureWebJobsStorage", "")
 
 # Blob Storage Configuration
 # Set this environment variable in your Azure Function app settings:
@@ -19,7 +19,7 @@ THREAD_TIMEOUT_MINUTES = int(os.environ.get("ThreadTimeout", "30"))
 # Conversion factor: 1 pt = 12700 EMU
 EMU_PER_PT = 12700
 
-INPUT_TEMPLATE = "templates/pantilla.pptx"
+INPUT_TEMPLATE = "template/plantilla.pptx"
 
 TABLE_HEADER_HEIGHT_PT = 24
 TABLE_LINE_HEIGHT_PT = 12

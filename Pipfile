@@ -1,0 +1,24 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+python-pptx = ">=1.0.2"
+Pillow = ">=10.0.0"
+lxml = ">=5.0.0"
+azure-storage-blob = ">=12.26.0"
+azure-data-tables = "==12.7.0"
+azure-identity = "~=1.20.0"
+azure-ai-projects = "==1.0.0b10"
+azure-functions = "==1.23.0"
+
+[dev-packages]
+pytest = "==8.4.2"
+pytest-mock = "==3.11.0"
+azure-functions = "==1.23.0"
+
+[requires]
+python_version = "3.12.4"
+
+
