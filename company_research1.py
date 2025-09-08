@@ -1,20 +1,26 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
-from helpers.utils import _find_shape_with_token, _add_section_header, _add_bullet, _replace_company_name_everywhere
-from helpers.utils import _load_json
+
+from helpers.utils import (
+    _add_bullet,
+    _add_section_header,
+    _find_shape_with_token,
+    _load_json,
+    _replace_company_name_everywhere,
+)
 
 
 def fill_company_research1(prs: Presentation, payload: dict):
     """
     Fills the CompanyResearch1 section with bullet points from objects/lists.
-    
+
     Args:
         prs: PowerPoint Presentation object
         payload: Dictionary containing company research data
         token: Token to find and replace in the presentation
     """
     token = "{{CompanyResearch1}}"
-    
+
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
         return
@@ -61,7 +67,8 @@ def fill_company_research1(prs: Presentation, payload: dict):
         else:
             # simple value
             _add_bullet(tf, f"{key}: {val}", level=0, size=14)
-            
+
+
 # --------------------------------------------------------------------
 # CompanyName desde JSON externo
 # --------------------------------------------------------------------
@@ -79,8 +86,9 @@ def _get_company_name_from_json(path_or_obj) -> str:
     try:
         return data["data"][0].get("Company Name", "").strip()
     except Exception as exc:
-        raise ValueError("Company JSON missing expected 'data[0][\'Company Name\']' field") from exc
-    
+        raise ValueError("Company JSON missing expected 'data[0]['Company Name']' field") from exc
+
+
 def fill_company_name_from_json(prs: Presentation, company_json_path: str):
     # Let any error propagate so callers can handle/log it appropriately
     name = _get_company_name_from_json(company_json_path)

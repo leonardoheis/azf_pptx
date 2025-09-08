@@ -1,14 +1,16 @@
 # tests/test_agent.py
-import sys
-import os
 import json
+import os
+import sys
 from unittest.mock import Mock
+
 import azure.functions as func
 
 # Ensure project root is on sys.path so tests can import top-level modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import function_app as fa
+
 
 def make_req(payload: dict) -> func.HttpRequest:
     return func.HttpRequest(
@@ -17,6 +19,7 @@ def make_req(payload: dict) -> func.HttpRequest:
         url="/api/agent_httptrigger",
         params={},
     )
+
 
 def test_agent_success(monkeypatch):
     # Prepare mocks for container/blob
@@ -36,10 +39,12 @@ def test_agent_success(monkeypatch):
     monkeypatch.setattr(fa, "_get_table_client", lambda: table_mock)
 
     # load payload files from test/payloads
-    with open("test/payloads/CompanyReseachData1_v2.json") as f1, \
-         open("test/payloads/CompanyReseachData2_v2.json") as f2, \
-         open("test/payloads/CompanyReseachData3_v2.json") as f3, \
-         open("test/payloads/IndustryResearch.json") as fi:
+    with (
+        open("test/payloads/CompanyReseachData1_v2.json") as f1,
+        open("test/payloads/CompanyReseachData2_v2.json") as f2,
+        open("test/payloads/CompanyReseachData3_v2.json") as f3,
+        open("test/payloads/IndustryResearch.json") as fi,
+    ):
         pd1 = json.load(f1)
         pd2 = json.load(f2)
         pd3 = json.load(f3)
@@ -60,10 +65,12 @@ def test_agent_success(monkeypatch):
     table_mock.create_entity.assert_called_once()
     blob_client.upload_blob.assert_called_once()
 
+
 def test_missing_required_returns_400():
     req = make_req({})
     resp = fa.agent_httptrigger(req)
     assert resp.status_code == 400
+
 
 def test_invalid_json_returns_400():
     # craft invalid body

@@ -1,15 +1,24 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
-from helpers.utils import _find_shape_with_token, _add_section_header, _add_bullet, _norm, _is_url, _extract_urls, _parse_date, _add_bullet_runs
+
+from helpers.utils import (
+    _add_bullet,
+    _add_bullet_runs,
+    _add_section_header,
+    _extract_urls,
+    _find_shape_with_token,
+    _is_url,
+    _norm,
+    _parse_date,
+)
 
 
 # --------------------------------------------------------------------
 # Función 3 (genérica): {{CompanyResearch3}} -> bullets jerárquicos + links
 # --------------------------------------------------------------------
 def fill_company_research3(prs: Presentation, payload: dict):
-    
-    token="{{CompanyResearch3}}"
-    
+    token = "{{CompanyResearch3}}"
+
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
         return
@@ -30,7 +39,9 @@ def fill_company_research3(prs: Presentation, payload: dict):
         if isinstance(section_value, dict):
             # buscar una lista "natural"
             for k, v in section_value.items():
-                if isinstance(v, list) and any(w in _norm(k) for w in ["list", "items", "entries", "highlights", "data", "points"]):
+                if isinstance(v, list) and any(
+                    w in _norm(k) for w in ["list", "items", "entries", "highlights", "data", "points"]
+                ):
                     return v, section_value
             # si no hubo, tomar la primera lista que aparezca
             for v in section_value.values():
@@ -153,7 +164,7 @@ def fill_company_research3(prs: Presentation, payload: dict):
                         _add_bullet(tf, f"{label}: {mv}", level=level, size=12)
                         # URLs internas
                         for u in _extract_urls(x):
-                            _add_bullet_runs(tf, [{"text": "link: "}, {"text": u, "link": u}], level=level+1, size=11)
+                            _add_bullet_runs(tf, [{"text": "link: "}, {"text": u, "link": u}], level=level + 1, size=11)
                     else:
                         _add_bullet(tf, f"{label}: {x}", level=level, size=12)
             return
@@ -166,12 +177,16 @@ def fill_company_research3(prs: Presentation, payload: dict):
             # resto de campos del sub-dict
             for sk in _order_subkeys(value, mk):
                 sv = value.get(sk)
-                _emit_value_as_bullets(sk, sv, level=level+1)
+                _emit_value_as_bullets(sk, sv, level=level + 1)
             return
 
         # string/numérico
         nk = _norm(label)
-        vtxt = _parse_date(value) if isinstance(value, str) and any(s in nk for s in ["date", "as of", "fiscal year", "fy"]) else str(value)
+        vtxt = (
+            _parse_date(value)
+            if isinstance(value, str) and any(s in nk for s in ["date", "as of", "fiscal year", "fy"])
+            else str(value)
+        )
         _add_bullet(tf, f"{label}: {vtxt}", level=level, size=12)
 
     # -------- recorrido genérico de secciones (en orden de aparición) --------

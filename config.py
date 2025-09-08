@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+
 from pptx.dml.color import RGBColor
 
 # Azure Storage Configuration
@@ -36,20 +37,20 @@ MULTILINE_CONTENT_FONT_SIZE_PT = 10
 SIMPLE_CONTENT_FONT_SIZE_PT = 10
 
 
-
 def get_next_output_filename():
     """
     Generates the next available output filename with timestamp for blob storage.
-    
+
     Returns:
         str: Next available filename (e.g., "output_20241201_143022.pptx")
     """
     base_name = "output"
     extension = ".pptx"
-    
+
     # Generate timestamp-based filename to ensure uniqueness
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{base_name}_{timestamp}{extension}"
+
 
 # Default output file (will be overridden by get_next_output_filename())
 OUTPUT_FILE = get_next_output_filename()

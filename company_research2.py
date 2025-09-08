@@ -1,23 +1,31 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
-from helpers.utils import _find_shape_with_token, _norm, _parse_number, _fmt_billions_usd, _parse_date, _parse_percent, _choose_link, _get_first_str, _add_bullet_runs, _deep_find
+
+from helpers.utils import (
+    _add_bullet_runs,
+    _choose_link,
+    _deep_find,
+    _find_shape_with_token,
+    _fmt_billions_usd,
+    _get_first_str,
+    _norm,
+    _parse_date,
+    _parse_number,
+    _parse_percent,
+)
 
 
 # --------------------------------------------------------------------
 # Función 2: {{CompanyResearch2}}  (tabla de métricas clave)
 # --------------------------------------------------------------------
-def fill_company_research2(
-    prs: Presentation,
-    payload: dict,
-    company_name: str | None = None
-):
+def fill_company_research2(prs: Presentation, payload: dict, company_name: str | None = None):
     """
     Genera bullets estilo narrativa, tolerante a cambios de claves/estructura.
     Detecta Revenue, Industry Avg Gross Margin, Company Gross Margin, Employee Count.
     Si falta algún dato, lo omite o degrada el texto.
     """
-    token="{{CompanyResearch2}}"
-    
+    token = "{{CompanyResearch2}}"
+
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
         return
@@ -41,7 +49,7 @@ def fill_company_research2(
         # cantidad
         amount = None
         for k in ("amount", "value", "revenue", "sales"):
-            if k in { _norm(x) for x in rev_obj.keys() }:
+            if k in {_norm(x) for x in rev_obj.keys()}:
                 for orig_k, v in rev_obj.items():
                     if _norm(orig_k) == k:
                         amount = _parse_number(v)
@@ -72,19 +80,34 @@ def fill_company_research2(
         link_sec = _choose_link(rev_obj.get("SEC Source"), rev_obj.get("SEC URL"))
 
         # bullet principal
-        _add_bullet_runs(tf, [
-            {"text": f"{company_name} reported an annual revenue of {amount_txt} for the fiscal year ending {fy_txt} ", "link": None},
-            *([{"text": "(", "link": None},
-               {"text": link_main, "link": link_main},
-               {"text": ").", "link": None}] if link_main else [{"text": ".", "link": None}]),
-        ], level=0, size=14)
+        _add_bullet_runs(
+            tf,
+            [
+                {
+                    "text": f"{company_name} reported an annual revenue of {amount_txt} for the fiscal year ending {fy_txt} ",
+                    "link": None,
+                },
+                *(
+                    [{"text": "(", "link": None}, {"text": link_main, "link": link_main}, {"text": ").", "link": None}]
+                    if link_main
+                    else [{"text": ".", "link": None}]
+                ),
+            ],
+            level=0,
+            size=14,
+        )
 
         # sub-bullet SEC opcional
         if link_sec:
-            _add_bullet_runs(tf, [
-                {"text": "Additional filing: ", "link": None, "bold": False},
-                {"text": link_sec, "link": link_sec},
-            ], level=1, size=12)
+            _add_bullet_runs(
+                tf,
+                [
+                    {"text": "Additional filing: ", "link": None, "bold": False},
+                    {"text": link_sec, "link": link_sec},
+                ],
+                level=1,
+                size=12,
+            )
 
     # --- Industry Average Gross Margin ---
     ind_gm_obj = _deep_find(payload, ["industry average gross margin", "industry gross margin", "industry avg"])
@@ -105,12 +128,22 @@ def fill_company_research2(
 
         link_ind = _choose_link(ind_gm_obj.get("Source"), ind_gm_obj.get("URL"), ind_gm_obj)
 
-        _add_bullet_runs(tf, [
-            {"text": f'The industry average gross margin for the "{industry or "industry"}" industry is approximately {gm_txt} ', "link": None},
-            *([{"text": "(", "link": None},
-               {"text": link_ind, "link": link_ind},
-               {"text": ").", "link": None}] if link_ind else [{"text": ".", "link": None}]),
-        ], level=0, size=14)
+        _add_bullet_runs(
+            tf,
+            [
+                {
+                    "text": f'The industry average gross margin for the "{industry or "industry"}" industry is approximately {gm_txt} ',
+                    "link": None,
+                },
+                *(
+                    [{"text": "(", "link": None}, {"text": link_ind, "link": link_ind}, {"text": ").", "link": None}]
+                    if link_ind
+                    else [{"text": ".", "link": None}]
+                ),
+            ],
+            level=0,
+            size=14,
+        )
 
     # --- Company Gross Margin ---
     comp_gm_obj = _deep_find(payload, ["company gross margin", "gross margin"])
@@ -146,12 +179,22 @@ def fill_company_research2(
         except Exception:
             pass
 
-        _add_bullet_runs(tf, [
-            {"text": f"The company's gross margin for the fiscal year ending {fy_txt} was {gm_txt}{tail} ", "link": None},
-            *([{"text": "(", "link": None},
-               {"text": link_cmp, "link": link_cmp},
-               {"text": ").", "link": None}] if link_cmp else [{"text": ".", "link": None}]),
-        ], level=0, size=14)
+        _add_bullet_runs(
+            tf,
+            [
+                {
+                    "text": f"The company's gross margin for the fiscal year ending {fy_txt} was {gm_txt}{tail} ",
+                    "link": None,
+                },
+                *(
+                    [{"text": "(", "link": None}, {"text": link_cmp, "link": link_cmp}, {"text": ").", "link": None}]
+                    if link_cmp
+                    else [{"text": ".", "link": None}]
+                ),
+            ],
+            level=0,
+            size=14,
+        )
 
     # --- Employee Count / Headcount ---
     emp_obj = _deep_find(payload, ["employee count", "headcount", "employees"])
@@ -181,9 +224,16 @@ def fill_company_research2(
 
         link_emp = _choose_link(emp_obj.get("Source"), emp_obj.get("URL"), emp_obj)
 
-        _add_bullet_runs(tf, [
-            {"text": f"The company had {hc_txt} employees as of {asof_txt} ", "link": None},
-            *([{"text": "(", "link": None},
-               {"text": link_emp, "link": link_emp},
-               {"text": ").", "link": None}] if link_emp else [{"text": ".", "link": None}]),
-        ], level=0, size=14)
+        _add_bullet_runs(
+            tf,
+            [
+                {"text": f"The company had {hc_txt} employees as of {asof_txt} ", "link": None},
+                *(
+                    [{"text": "(", "link": None}, {"text": link_emp, "link": link_emp}, {"text": ").", "link": None}]
+                    if link_emp
+                    else [{"text": ".", "link": None}]
+                ),
+            ],
+            level=0,
+            size=14,
+        )

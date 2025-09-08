@@ -17,8 +17,7 @@ azure-functions = "==1.23.0"
 pytest = "==8.4.2"
 pytest-mock = "==3.11.0"
 azure-functions = "==1.23.0"
+pre-commit = "*"
 
 [requires]
 python_version = "3.12.4"
-
-
