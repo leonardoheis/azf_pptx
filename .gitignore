@@ -211,3 +211,4 @@ requirements/prd
 # Local Azurite emulator data
 azurite-data/
 azurite/
+.python_packages

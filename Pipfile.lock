@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "20fb2ec970f236887bc1d028d495d56046d0fb6b6f28fab28c377ac8e473b771"
+            "sha256": "35311f7751899a075ab47990d01611db79c518b8b408609bf30a657189ac0e03"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -35,12 +35,12 @@
         },
         "azure-data-tables": {
             "hashes": [
-                "sha256:24ed9b5690aa46c213182e32bb1b39a68dd9f526d84f447c287e3a401b437c10",
-                "sha256:b14fc94a3223a2835ff5688e17d8e107b27c7cd7c4114138f2ac81373723705d"
+                "sha256:9869620765142d7caec7a6adca733f617ddcd006a810876f0cf95eea4f5b9692",
+                "sha256:e0d5598113855f9114fd7671623d35509f83772970cfdc597901b35f42dc3134"
             ],
             "index": "pypi",
-            "markers": "python_version >= '3.9'",
-            "version": "==12.7.0"
+            "markers": "python_version >= '3.8'",
+            "version": "==12.6.0"
         },
         "azure-functions": {
             "hashes": [

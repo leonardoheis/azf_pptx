@@ -1,7 +1,11 @@
 {
-  "IsEncrypted": true,
+  "IsEncrypted": false,
   "Values": {
-    "FUNCTIONS_WORKER_RUNTIME": "CfDJ8DZ1lbmCsKFEqLxOTgArv2DVvM7uqIDjGlIHMfvg42jJEBGUUbxChdovVn0kVJBROCGyJF4HBWub71JE6iICMBIbjnX9sPc0imN2MHiseiI/uSccdBi8/DfnbSbuZdtpdg=="
-  },
-  "ConnectionStrings": {}
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;TableEndpoint=http://127.0.0.1:10002/devstoreaccount1;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "languageWorkers__python__defaultExecutablePath": ".venv\\Scripts\\python.exe",
+    "AZ_STORAGE_CONN_STRING": "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;TableEndpoint=http://127.0.0.1:10002/devstoreaccount1;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1",
+    "AIProjectConnString": "eastus2.api.azureml.ms;0e723583-92a1-465a-8cf6-e47bc860007a;st_resources_dashboards_1;st-valucraft-test1",
+    "ThreadTimeout": 30
+  }
 }
