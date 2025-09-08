@@ -4,6 +4,8 @@ from pptx.util import Pt
 import re
 import math
 from datetime import datetime
+import json
+import os
 
 def _set_font_size(run, size_pt=8, bold=False, color=None):
     run.font.size = Pt(size_pt)
@@ -244,4 +246,13 @@ def estimate_row_height(entry: dict, keys: list, line_height_pt: int, col_width_
             s = str(val)
             lines_i = math.ceil(len(s) / chars_per_line)
         max_lines = max(max_lines, lines_i)
-    return max_lines * line_height_pt    
+    return max_lines * line_height_pt
+
+
+def _load_json(data_or_path):
+    if isinstance(data_or_path, dict):
+        return data_or_path
+    if isinstance(data_or_path, (str, os.PathLike)):
+        with open(data_or_path, encoding="utf-8") as f:
+            return json.load(f)
+    raise TypeError("Expected dict or JSON file path")    

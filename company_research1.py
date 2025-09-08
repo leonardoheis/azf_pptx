@@ -1,7 +1,7 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
-from utils import _find_shape_with_token, _add_section_header, _add_bullet, _replace_company_name_everywhere
-import json
+from helpers.utils import _find_shape_with_token, _add_section_header, _add_bullet, _replace_company_name_everywhere
+from helpers.utils import _load_json
 
 
 def fill_company_research1(prs: Presentation, payload: dict):
@@ -65,15 +65,23 @@ def fill_company_research1(prs: Presentation, payload: dict):
 # --------------------------------------------------------------------
 # CompanyName desde JSON externo
 # --------------------------------------------------------------------
-def _get_company_name_from_json(path: str) -> str:
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
+def _get_company_name_from_json(path_or_obj) -> str:
+    """Accept either a loaded dict or a path to a JSON file.
+
+    Use the helper `_load_json` which handles both cases.
+    """
+    try:
+        data = _load_json(path_or_obj)
+    except Exception as exc:
+        raise ValueError(f"Failed to load company JSON: {exc}") from exc
+
     # Se espera un {"data": [ { "Company Name": "..." , ... } ]}
     try:
         return data["data"][0].get("Company Name", "").strip()
-    except Exception:
-        return ""            
+    except Exception as exc:
+        raise ValueError("Company JSON missing expected 'data[0][\'Company Name\']' field") from exc
     
 def fill_company_name_from_json(prs: Presentation, company_json_path: str):
-    name = _get_company_name_from_json(company_json_path) or "Company"
+    # Let any error propagate so callers can handle/log it appropriately
+    name = _get_company_name_from_json(company_json_path)
     _replace_company_name_everywhere(prs, name)

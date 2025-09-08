@@ -1,7 +1,13 @@
 # tests/test_agent.py
+import sys
+import os
 import json
 from unittest.mock import Mock
 import azure.functions as func
+
+# Ensure project root is on sys.path so tests can import top-level modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import function_app as fa
 
 def make_req(payload: dict) -> func.HttpRequest:
@@ -29,11 +35,21 @@ def test_agent_success(monkeypatch):
     monkeypatch.setattr(fa, "_get_container_client", lambda: container_mock)
     monkeypatch.setattr(fa, "_get_table_client", lambda: table_mock)
 
+    # load payload files from test/payloads
+    with open("test/payloads/CompanyReseachData1_v2.json") as f1, \
+         open("test/payloads/CompanyReseachData2_v2.json") as f2, \
+         open("test/payloads/CompanyReseachData3_v2.json") as f3, \
+         open("test/payloads/IndustryResearch.json") as fi:
+        pd1 = json.load(f1)
+        pd2 = json.load(f2)
+        pd3 = json.load(f3)
+        pdi = json.load(fi)
+
     payload = {
-        "CompanyReseachData1": {"k": 1},
-        "CompanyReseachData2": {"k": 2},
-        "CompanyReseachData3": {"k": 3},
-        "IndustryResearch": {"k": 4},
+        "CompanyReseachData1": pd1,
+        "CompanyReseachData2": pd2,
+        "CompanyReseachData3": pd3,
+        "IndustryResearch": pdi,
     }
 
     req = make_req(payload)

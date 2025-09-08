@@ -1,6 +1,6 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
-from utils import _find_shape_with_token, _add_section_header, _add_bullet, _norm, _is_url, _extract_urls, _parse_date, _add_bullet_runs
+from helpers.utils import _find_shape_with_token, _add_section_header, _add_bullet, _norm, _is_url, _extract_urls, _parse_date, _add_bullet_runs
 
 
 # --------------------------------------------------------------------

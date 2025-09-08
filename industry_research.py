@@ -3,7 +3,7 @@ from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
 from pptx.dml.color import RGBColor
 from pptx.util import Pt
 from dataclasses import dataclass
-from utils import estimate_row_height
+from helpers.utils import estimate_row_height
 from config import (
     EMU_PER_PT, 
     TABLE_HEADER_HEIGHT_PT, 
