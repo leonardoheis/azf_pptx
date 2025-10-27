@@ -91,6 +91,159 @@ def _get_container_client():
     return container_client
 
 
+def _validate_request_data(req_body: dict) -> tuple[dict, dict, dict, dict, str | None]:
+    """
+    Validate that all required fields are present and of correct type.
+
+    Returns:
+        Tuple of (company_data1, company_data2, company_data3, industry_data, error_message)
+        error_message is None if validation passes.
+    """
+    required = ["CompanyReseachData1", "CompanyReseachData2", "CompanyReseachData3", "IndustryResearch"]
+    missing = [k for k in required if k not in req_body]
+    if missing:
+        return None, None, None, None, f"Missing required files: {', '.join(missing)}"
+
+    company_data1 = req_body["CompanyReseachData1"]
+    company_data2 = req_body["CompanyReseachData2"]
+    company_data3 = req_body["CompanyReseachData3"]
+    industry_data = req_body["IndustryResearch"]
+
+    for obj in (company_data1, company_data2, company_data3, industry_data):
+        if not isinstance(obj, dict):
+            return None, None, None, None, "All files must contain valid JSON objects"
+
+    return company_data1, company_data2, company_data3, industry_data, None
+
+
+def _log_received_data_keys(company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict) -> None:
+    """Log the keys received in each data dictionary."""
+    logging.info("Keys1=%s", list(company_data1.keys()))
+    logging.info("Keys2=%s", list(company_data2.keys()))
+    logging.info("Keys3=%s", list(company_data3.keys()))
+    logging.info("KeysIndustry=%s", list(industry_data.keys()))
+
+
+def _create_processed_data_summary(
+    company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict
+) -> dict:
+    """Create a summary dictionary of processed data statistics."""
+    return {
+        "company_data1_processed": len(company_data1),
+        "company_data2_processed": len(company_data2),
+        "company_data3_processed": len(company_data3),
+        "industry_data_processed": len(industry_data),
+        "total_fields": len(company_data1) + len(company_data2) + len(company_data3) + len(industry_data),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "output_location": None,
+    }
+
+
+def _build_presentation(
+    company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict
+) -> Presentation:
+    """
+    Build a PowerPoint presentation from the provided data.
+
+    Returns:
+        Presentation object populated with the data.
+    """
+    prs = Presentation(INPUT_TEMPLATE)
+
+    fill_company_name_from_json(prs, company_data1)
+    fill_company_research1(prs, company_data1)
+    fill_company_research2(prs, company_data2)
+    fill_company_research3(prs, company_data3)
+    fill_industry_slides(prs, prs.slides[len(prs.slides) - 1], industry_data)
+
+    return prs
+
+
+def _save_presentation_to_buffer(prs: Presentation) -> BytesIO:
+    """Save a presentation to a BytesIO buffer."""
+    buf = BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def _upload_presentation_to_blob(buf: BytesIO, output_filename: str) -> str:
+    """
+    Upload presentation buffer to Azure Blob Storage.
+
+    Returns:
+        Full URL of the uploaded blob.
+    """
+    container_client = _get_container_client()
+    blob_client = container_client.get_blob_client(blob=output_filename)
+    blob_client.upload_blob(buf.getvalue(), overwrite=True)
+
+    account = blob_client.account_name
+    blob_url = f"https://{account}.blob.core.windows.net/{AZ_BLOB_CONTAINER_NAME}/{output_filename}"
+    logging.info("Presentation saved: %s", blob_url)
+
+    return blob_url
+
+
+def _create_table_entity(
+    company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict, processed_data: dict
+) -> dict:
+    """Create a table entity for logging processed data."""
+    return {
+        "PartitionKey": "processed_files",
+        "RowKey": datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"),
+        "CompanyData1Keys": json.dumps(list(company_data1.keys())),
+        "CompanyData2Keys": json.dumps(list(company_data2.keys())),
+        "CompanyData3Keys": json.dumps(list(company_data3.keys())),
+        "IndustryDataKeys": json.dumps(list(industry_data.keys())),
+        "ProcessedData": json.dumps(processed_data),
+        "Timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _log_to_table(entity: dict) -> None:
+    """Log an entity to Azure Table Storage."""
+    table_client = _get_table_client()
+    table_client.create_entity(entity=entity)
+
+
+def _create_success_response(
+    processed_data: dict,
+    company_data1: dict,
+    company_data2: dict,
+    company_data3: dict,
+    industry_data: dict,
+    output_filename: str,
+) -> dict:
+    """Create the success response payload."""
+    return {
+        "status": "success",
+        "message": "Processed files and saved PPTX to Blob",
+        "data": processed_data,
+        "files_received": {
+            "CompanyReseachData1_size": len(company_data1),
+            "CompanyReseachData2_size": len(company_data2),
+            "CompanyReseachData3_size": len(company_data3),
+            "IndustryResearch_size": len(industry_data),
+        },
+        "output_file": {
+            "filename": output_filename,
+            "blob_path": output_filename,
+            "container": AZ_BLOB_CONTAINER_NAME,
+            "full_url": processed_data.get("output_location", "Not available"),
+        },
+    }
+
+
+def _create_error_response(error_message: str, status_code: int) -> func.HttpResponse:
+    """Create an error HTTP response."""
+    return func.HttpResponse(
+        json.dumps({"error": error_message, "status": "error"}),
+        status_code=status_code,
+        mimetype="application/json",
+    )
+
+
 @app.route(route="agent_httptrigger")
 def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
     """
@@ -99,121 +252,46 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
     try:
         req_body = req.get_json()
 
-        required = ["CompanyReseachData1", "CompanyReseachData2", "CompanyReseachData3", "IndustryResearch"]
-        missing = [k for k in required if k not in req_body]
-        if missing:
-            return func.HttpResponse(
-                json.dumps({"error": f"Missing required files: {', '.join(missing)}", "status": "error"}),
-                status_code=400,
-                mimetype="application/json",
-            )
+        # Validate request data
+        company_data1, company_data2, company_data3, industry_data, validation_error = _validate_request_data(req_body)
+        if validation_error:
+            return _create_error_response(validation_error, 400)
 
-        company_data1 = req_body["CompanyReseachData1"]
-        company_data2 = req_body["CompanyReseachData2"]
-        company_data3 = req_body["CompanyReseachData3"]
-        industry_data = req_body["IndustryResearch"]
+        # Log received data
+        _log_received_data_keys(company_data1, company_data2, company_data3, industry_data)
 
-        for obj in (company_data1, company_data2, company_data3, industry_data):
-            if not isinstance(obj, dict):
-                return func.HttpResponse(
-                    json.dumps({"error": "All files must contain valid JSON objects", "status": "error"}),
-                    status_code=400,
-                    mimetype="application/json",
-                )
+        # Create processing summary
+        processed_data = _create_processed_data_summary(company_data1, company_data2, company_data3, industry_data)
 
-        logging.info("Keys1=%s", list(company_data1.keys()))
-        logging.info("Keys2=%s", list(company_data2.keys()))
-        logging.info("Keys3=%s", list(company_data3.keys()))
-        logging.info("KeysIndustry=%s", list(industry_data.keys()))
-
-        processed_data = {
-            "company_data1_processed": len(company_data1),
-            "company_data2_processed": len(company_data2),
-            "company_data3_processed": len(company_data3),
-            "industry_data_processed": len(industry_data),
-            "total_fields": len(company_data1) + len(company_data2) + len(company_data3) + len(industry_data),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "output_location": None,
-        }
-
-        # Build PPTX + upload
+        # Build and upload presentation
         current_output_file = get_next_output_filename()
         try:
-            prs = Presentation(INPUT_TEMPLATE)
-
-            # your fill_* helpers (imported at module scope)
-
-            fill_company_name_from_json(prs, company_data1)
-            fill_company_research1(prs, company_data1)
-            fill_company_research2(prs, company_data2)
-            fill_company_research3(prs, company_data3)
-            fill_industry_slides(prs, prs.slides[len(prs.slides) - 1], industry_data)
-
-            buf = BytesIO()
-            prs.save(buf)
-            buf.seek(0)
-
-            container_client = _get_container_client()
-            blob_client = container_client.get_blob_client(blob=current_output_file)
-            blob_client.upload_blob(buf.getvalue(), overwrite=True)
-
-            account = blob_client.account_name  # or _blob_service_client.account_name
-            processed_data["output_location"] = (
-                f"https://{account}.blob.core.windows.net/{AZ_BLOB_CONTAINER_NAME}/{current_output_file}"
-            )
-            logging.info("Presentation saved: %s", processed_data["output_location"])
+            prs = _build_presentation(company_data1, company_data2, company_data3, industry_data)
+            buf = _save_presentation_to_buffer(prs)
+            blob_url = _upload_presentation_to_blob(buf, current_output_file)
+            processed_data["output_location"] = blob_url
         except Exception as e:
             logging.exception("Error building/uploading PPTX: %s", e)
 
-        # Log to Tables
+        # Log to Table Storage
         try:
-            table_client = _get_table_client()
-            entity = {
-                "PartitionKey": "processed_files",
-                "RowKey": datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"),
-                "CompanyData1Keys": json.dumps(list(company_data1.keys())),
-                "CompanyData2Keys": json.dumps(list(company_data2.keys())),
-                "CompanyData3Keys": json.dumps(list(company_data3.keys())),
-                "IndustryDataKeys": json.dumps(list(industry_data.keys())),
-                "ProcessedData": json.dumps(processed_data),
-                "Timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            table_client.create_entity(entity=entity)
+            entity = _create_table_entity(company_data1, company_data2, company_data3, industry_data, processed_data)
+            _log_to_table(entity)
         except Exception as e:
             logging.exception("Error storing data in table: %s", e)
 
+        # Create and return success response
+        response_data = _create_success_response(
+            processed_data, company_data1, company_data2, company_data3, industry_data, current_output_file
+        )
         return func.HttpResponse(
-            json.dumps(
-                {
-                    "status": "success",
-                    "message": "Processed files and saved PPTX to Blob",
-                    "data": processed_data,
-                    "files_received": {
-                        "CompanyReseachData1_size": len(company_data1),
-                        "CompanyReseachData2_size": len(company_data2),
-                        "CompanyReseachData3_size": len(company_data3),
-                        "IndustryResearch_size": len(industry_data),
-                    },
-                    "output_file": {
-                        "filename": current_output_file,
-                        "blob_path": current_output_file,
-                        "container": AZ_BLOB_CONTAINER_NAME,
-                        "full_url": processed_data.get("output_location", "Not available"),
-                    },
-                }
-            ),
+            json.dumps(response_data),
             status_code=200,
             mimetype="application/json",
         )
 
     except ValueError as e:
-        return func.HttpResponse(
-            json.dumps({"error": f"Invalid JSON: {e}", "status": "error"}), status_code=400, mimetype="application/json"
-        )
+        return _create_error_response(f"Invalid JSON: {e}", 400)
     except Exception as e:
         logging.exception("Unexpected error")
-        return func.HttpResponse(
-            json.dumps({"error": f"Internal server error: {e}", "status": "error"}),
-            status_code=500,
-            mimetype="application/json",
-        )
+        return _create_error_response(f"Internal server error: {e}", 500)
