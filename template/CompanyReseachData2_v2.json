@@ -1,0 +1,28 @@
+{
+    "data": [
+    {
+      "Revenue": {
+        "Amount": 97690000000,
+        "Fiscal Year Close Date": "2024-12-31",
+        "Type": "Fact",
+        "Source": "https://stockanalysis.com/stocks/tsla/revenue/"
+      },
+      "Industry Average Gross Margin": {
+        "Industry": "Vehicle OEM",
+        "Average Gross Margin": "17.86%",
+        "Source": "https://stockanalysis.com/stocks/tsla/financials/ratios/"
+      },
+      "Company Gross Margin": {
+        "Gross Margin": "17.86%",
+        "Fiscal Year Close Date": "2024-12-31",
+        "Type": "Fact",
+        "Source": "https://stockanalysis.com/stocks/tsla/financials/ratios/"
+      },
+      "Employee Count": {
+        "Headcount": 125665,
+        "As Of": "2024-12-31",
+        "Source": "https://stockanalysis.com/stocks/tsla/employees/"
+      }
+    }
+  ]
+}

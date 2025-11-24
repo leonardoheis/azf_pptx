@@ -36,7 +36,7 @@ def test_agent_success(monkeypatch):
 
     # Monkeypatch accessors in function_app
     monkeypatch.setattr(fa, "_get_container_client", lambda: container_mock)
-    monkeypatch.setattr(fa, "_get_table_client", lambda: table_mock)
+    # monkeypatch.setattr(fa, "_get_table_client", lambda: table_mock)
 
     # load payload files from test/payloads
     with (

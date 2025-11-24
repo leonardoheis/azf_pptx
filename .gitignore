@@ -212,3 +212,4 @@ requirements/prd
 azurite-data/
 azurite/
 .python_packages
+output*.pptx

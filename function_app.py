@@ -6,12 +6,7 @@ from functools import lru_cache
 from io import BytesIO
 
 import azure.functions as func
-
-# from azure.ai.projects import AIProjectClient
 from azure.core.exceptions import ResourceExistsError
-from azure.data.tables import TableServiceClient
-
-# from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from pptx import Presentation
 
@@ -19,13 +14,8 @@ from company_research1 import fill_company_name_from_json, fill_company_research
 from company_research2 import fill_company_research2
 from company_research3 import fill_company_research3
 from config import AZ_STORAGE_CONN_STRING  # may be None in local env
-from config import AZ_BLOB_CONTAINER_NAME, AZ_BLOB_TABLE_NAME, INPUT_TEMPLATE, get_next_output_filename
+from config import AZ_BLOB_CONTAINER_NAME, INPUT_TEMPLATE, get_next_output_filename
 from industry_research import fill_industry_slides
-
-# from pptx.dml.color import RGBColor
-# from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
-# from pptx.util import Inches, Pt
-
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -39,15 +29,15 @@ def _init_clients():
     conn = _get_conn_string()
 
     # Table client
-    svc = TableServiceClient.from_connection_string(conn)
-    table_client = svc.get_table_client(table_name=AZ_BLOB_TABLE_NAME)
-    try:
-        table_client.create_table()
-    except ResourceExistsError:
-        logging.debug("Table already exists (create_table). Continuing.")
-    except Exception:
-        logging.exception("Unexpected error creating table")
-        raise
+    # svc = TableServiceClient.from_connection_string(conn)
+    # table_client = svc.get_table_client(table_name=AZ_BLOB_TABLE_NAME)
+    # try:
+    #     table_client.create_table()
+    # except ResourceExistsError:
+    #     logging.debug("Table already exists (create_table). Continuing.")
+    # except Exception:
+    #     logging.exception("Unexpected error creating table")
+    #     raise
 
     # Blob client
     blob_service_client = BlobServiceClient.from_connection_string(conn)
@@ -59,8 +49,8 @@ def _init_clients():
     except Exception:
         logging.exception("Unexpected error creating container")
         raise
-
-    return table_client, blob_service_client, container_client
+    # , table_client,
+    return blob_service_client, container_client
 
 
 def _get_conn_string() -> str:
@@ -76,18 +66,18 @@ def _get_conn_string() -> str:
     return conn
 
 
-def _ensure_resources():
-    """Compatibility shim retained for call sites; triggers client initialization."""
-    _init_clients()
+# def _ensure_resources():
+#    """Compatibility shim retained for call sites; triggers client initialization."""
+#    _init_clients()
 
 
-def _get_table_client():
-    table_client, _, _ = _init_clients()
-    return table_client
+# def _get_table_client():
+#    table_client, _, _ = _init_clients()
+#    return table_client
 
 
 def _get_container_client():
-    _, _, container_client = _init_clients()
+    _, container_client = _init_clients()
     return container_client
 
 
@@ -201,10 +191,10 @@ def _create_table_entity(
     }
 
 
-def _log_to_table(entity: dict) -> None:
-    """Log an entity to Azure Table Storage."""
-    table_client = _get_table_client()
-    table_client.create_entity(entity=entity)
+# def _log_to_table(entity: dict) -> None:
+#    """Log an entity to Azure Table Storage."""
+#    table_client = _get_table_client()
+#    table_client.create_entity(entity=entity)
 
 
 def _create_success_response(
@@ -274,11 +264,11 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
             logging.exception("Error building/uploading PPTX: %s", e)
 
         # Log to Table Storage
-        try:
-            entity = _create_table_entity(company_data1, company_data2, company_data3, industry_data, processed_data)
-            _log_to_table(entity)
-        except Exception as e:
-            logging.exception("Error storing data in table: %s", e)
+        # try:
+        #     entity = _create_table_entity(company_data1, company_data2, company_data3, industry_data, processed_data)
+        #     _log_to_table(entity)
+        # except Exception as e:
+        #     logging.exception("Error storing data in table: %s", e)
 
         # Create and return success response
         response_data = _create_success_response(
