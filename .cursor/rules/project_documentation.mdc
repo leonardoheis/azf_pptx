@@ -1,0 +1,265 @@
+---
+alwaysApply: true
+---
+
+# Azure Functions PowerPoint Generation Project
+
+## Tech Stack
+
+- **Runtime**: Python 3.10+ (Azure Functions v2)
+- **Cloud Platform**: Microsoft Azure
+  - Azure Functions (HTTP triggers)
+  - Azure Blob Storage
+  - Azure Table Storage
+- **Key Libraries**:
+  - `azure-functions` - Azure Functions runtime
+  - `python-pptx` - PowerPoint generation
+  - `azure-storage-blob` - Blob storage operations
+  - `azure-data-tables` - Table storage operations
+  - `azure-identity` - Azure authentication
+  - `pytest` and `pytest-mock` - Testing framework
+
+## Project Structure
+
+```
+/
+├── function_app.py          # Main Azure Function HTTP triggers
+├── config.py                # Configuration and environment variables
+├── company_research*.py     # Company data processing modules
+├── industry_research.py     # Industry data processing
+├── /helpers/                # Utility functions and helpers
+│   └── utils.py
+├── /services/               # Service layer (business logic)
+│   └── /industry/           # Industry-specific services
+├── /template/               # Template files (PPTX, JSON samples)
+├── /test/                   # Test files
+│   └── /payloads/           # Test data payloads
+├── requirements.txt         # Python dependencies
+└── local.settings.json      # Local Azure Functions settings
+```
+
+## Code Style & Conventions
+
+### Naming Conventions
+
+- **Functions**: Use `snake_case` for all function names
+- **Private functions**: Prefix with underscore `_function_name()` for internal/helper functions
+- **Variables**: Use `snake_case` for variables
+- **Constants**: Use `UPPER_CASE` for constants (in `config.py`)
+- **Type hints**: Always include type hints for function parameters and return types
+
+### Function Design Patterns
+
+1. **Functional Decomposition**: Break complex logic into small, focused functions
+   - Each function should do one thing well
+   - Extract validation, transformation, and response creation into separate functions
+   
+2. **Private Helper Functions**: Use underscore prefix for functions that are internal implementation details
+   ```python
+   def _validate_request_data(req_body: dict) -> tuple[dict, dict, dict, dict, str | None]:
+       """Internal validation logic."""
+       pass
+   ```
+
+3. **Return Type Patterns**:
+   - Use `tuple` for multiple return values (especially validation: data + error)
+   - Use `dict | None` or `str | None` for optional returns
+   - Modern Python 3.10+ type syntax: `dict[str, str]`, `list[str]`, `tuple[...]`
+
+4. **Docstrings**: Add docstrings to all non-trivial functions
+   - Use triple quotes
+   - Include brief description
+   - Document parameters and return values when complex
+
+### State Management
+
+- **Avoid Global Variables**: Never use module-level mutable globals [[memory:8307818]]
+- **Use `@lru_cache`**: Cache expensive initialization (e.g., Azure clients)
+  ```python
+  @lru_cache(maxsize=1)
+  def _init_clients():
+      """Create and return cached clients."""
+      return blob_service_client, container_client
+  ```
+- **Lazy Initialization**: Initialize Azure resources only when first accessed
+
+### Configuration Management
+
+- **Environment Variables**: All configuration via `os.environ.get()` with defaults
+- **Constants File**: Centralize all constants in `config.py`
+- **Configuration Patterns**:
+  ```python
+  AZ_STORAGE_CONN_STRING = os.environ.get("AZ_STORAGE_CONN_STRING") or os.environ.get("AzureWebJobsStorage", "")
+  AZ_BLOB_CONTAINER_NAME = os.environ.get("BLOB_CONTAINER_NAME", "pptx-out")
+  ```
+
+### Error Handling
+
+1. **Try-Except Blocks**: Wrap risky operations
+2. **Logging**: Use `logging` module for all errors
+   ```python
+   logging.exception("Error description")
+   logging.info("Info message")
+   logging.debug("Debug message")
+   ```
+3. **Graceful Degradation**: Handle `ResourceExistsError` gracefully (idempotent operations)
+4. **Structured Error Responses**: Create helper functions for error responses
+   ```python
+   def _create_error_response(error_message: str, status_code: int) -> func.HttpResponse:
+       return func.HttpResponse(
+           json.dumps({"error": error_message, "status": "error"}),
+           status_code=status_code,
+           mimetype="application/json",
+       )
+   ```
+
+### Azure Functions Patterns
+
+1. **HTTP Triggers**: Use `@app.route()` decorator
+   ```python
+   @app.route(route="agent_httptrigger")
+   def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
+       pass
+   ```
+
+2. **Request Processing Flow**:
+   - Parse request → Validate → Process → Upload to Blob → Log → Return response
+   - Extract each step into separate functions
+
+3. **Response Format**: Always return JSON with consistent structure
+   ```python
+   {
+       "status": "success" | "error",
+       "message": "...",
+       "data": {...}
+   }
+   ```
+
+### Azure Storage Patterns
+
+1. **Client Initialization**: Cache clients with `@lru_cache`
+2. **Connection String Priority**:
+   - First check custom env var (e.g., `AZ_STORAGE_CONN_STRING`)
+   - Fallback to `AzureWebJobsStorage`
+   - Fail fast with clear error if missing
+
+3. **Blob Upload**: Use `BytesIO` buffer for in-memory operations
+   ```python
+   buf = BytesIO()
+   prs.save(buf)
+   buf.seek(0)
+   blob_client.upload_blob(buf.getvalue(), overwrite=True)
+   ```
+
+### PowerPoint (python-pptx) Patterns
+
+1. **Template-Based**: Always load from template file
+2. **Token Replacement**: Use placeholders like `{{TokenName}}`
+3. **Helper Functions**: Create helpers for common operations
+   - `_set_font_size()` - Font formatting
+   - `_add_bullet()` - Bullet points
+   - `_find_shape_with_token()` - Shape searching
+   - `_replace_token_in_shape_text()` - Text replacement
+
+4. **Formatting Constants**: Define in `config.py`
+   ```python
+   TABLE_HEADER_HEIGHT_PT = 24
+   TABLE_LINE_HEIGHT_PT = 12
+   TABLE_HEADER_BG_COLOR = RGBColor(0, 70, 122)
+   ```
+
+### Data Processing Patterns
+
+1. **Normalization**: Create helper for text normalization
+   ```python
+   def _norm(s: str) -> str:
+       return re.sub(r"\s+", " ", str(s or "")).strip().lower()
+   ```
+
+2. **Parsing Utilities**: Separate functions for parsing different data types
+   - `_parse_date()` - Date parsing
+   - `_parse_number()` - Number parsing (handles "97.69 billion", etc.)
+   - `_parse_percent()` - Percentage parsing
+
+3. **Data Extraction**: Use recursive search for nested dictionaries
+   ```python
+   def _deep_find(d: dict, key_synonyms: list[str]) -> dict | None:
+       """Recursive search for keys."""
+       pass
+   ```
+
+### Testing Patterns
+
+1. **Test Organization**: 
+   - Tests in `/test/` directory
+   - Test data in `/test/payloads/`
+   - Use `pytest` framework
+
+2. **Test File Naming**: `test_*.py` format
+
+3. **Mock External Dependencies**: Use `pytest-mock` for Azure services
+
+### Import Organization
+
+1. **Standard Library**: First group
+2. **Third-Party Libraries**: Second group (azure, pptx, etc.)
+3. **Local Imports**: Last group
+4. **Spacing**: Blank line between groups
+
+Example:
+```python
+import json
+import logging
+import os
+from datetime import datetime, timezone
+from functools import lru_cache
+
+import azure.functions as func
+from azure.storage.blob import BlobServiceClient
+from pptx import Presentation
+
+from company_research1 import fill_company_name_from_json
+from config import AZ_STORAGE_CONN_STRING
+```
+
+### Code Quality
+
+1. **No Dead Code**: Remove commented code after feature is stable
+2. **Early Returns**: Use early returns for validation
+   ```python
+   if validation_error:
+       return _create_error_response(validation_error, 400)
+   ```
+3. **Avoid Magic Numbers**: Use named constants from `config.py`
+4. **Type Safety**: Prefer type hints over runtime type checks
+5. **Explicit over Implicit**: Be explicit about conversions and operations
+
+### Comments
+
+- Use inline comments sparingly - prefer descriptive function names
+- Document "why" not "what" when comments are needed
+- Keep Spanish comments for domain-specific terms if part of requirements
+- Prefer docstrings for function documentation
+
+### File Naming
+
+- Python modules: `snake_case.py`
+- JSON templates: `PascalCase.json` or descriptive names
+- Test files: `test_*.py`
+- Configuration: `config.py`, `local.settings.json`
+
+## Development Practices
+
+1. **Local Development**: Use Azurite for local Azure Storage emulation
+2. **Configuration**: Never hardcode secrets; use environment variables
+3. **Logging**: Log liberally with appropriate levels (debug, info, error, exception)
+4. **Resource Cleanup**: Clean up temporary files and buffers
+5. **Idempotency**: Design functions to be safely retryable
+
+## Dependencies Management
+
+- Use `requirements.txt` for pip dependencies
+- Pin major versions, allow minor updates: `package~=1.20.0`
+- Comment special cases (e.g., DO NOT include azure-functions-worker)
+
+
