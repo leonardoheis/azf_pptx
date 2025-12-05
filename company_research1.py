@@ -1,6 +1,7 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
 
+from helpers.exceptions import TemplateError
 from helpers.utils import (
     _add_bullet,
     _add_section_header,
@@ -17,13 +18,12 @@ def fill_company_research1(prs: Presentation, payload: dict):
     Args:
         prs: PowerPoint Presentation object
         payload: Dictionary containing company research data
-        token: Token to find and replace in the presentation
     """
     token = "{{CompanyResearch1}}"
 
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
-        return
+        raise TemplateError(f"Token '{token}' not found in any slide")
 
     tf = shape.text_frame
     tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE

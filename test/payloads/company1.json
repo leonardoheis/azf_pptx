@@ -1,14 +1,14 @@
 {
-  "CompanyReseachData1": {
+  "CompanyResearchData1": {
     "company_name": "ACME Corp",
     "ticker": "ACME",
     "description": "A fictional company for testing"
   },
-  "CompanyReseachData2": {
+  "CompanyResearchData2": {
     "revenue": 1234567,
     "year": 2024
   },
-  "CompanyReseachData3": {
+  "CompanyResearchData3": {
     "employees": 250,
     "hq": "Metropolis"
   },

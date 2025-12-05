@@ -18,6 +18,7 @@ from config import (
     TABLE_LINE_HEIGHT_PT,
     TABLE_PARAGRAPH_FONT_SIZE_PT,
 )
+from helpers.exceptions import TemplateError
 from helpers.utils import estimate_row_height
 
 
@@ -43,7 +44,7 @@ def fill_industry_slides(prs: Presentation, slide, payload: dict):
     """
     placeholder_position = _find_and_remove_placeholder(slide, "{{IndustryResearch}}")
     if placeholder_position is None:
-        return
+        raise TemplateError("Token '{{IndustryResearch}}' not found in any slide")
 
     left, top, width, height = placeholder_position
 

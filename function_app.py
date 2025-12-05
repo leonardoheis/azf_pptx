@@ -15,6 +15,7 @@ from company_research2 import fill_company_research2
 from company_research3 import fill_company_research3
 from config import AZ_STORAGE_CONN_STRING  # may be None in local env
 from config import AZ_BLOB_CONTAINER_NAME, INPUT_TEMPLATE, get_next_output_filename
+from helpers.exceptions import AppError, ValidationError
 from industry_research import fill_industry_slides
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
@@ -89,19 +90,24 @@ def _validate_request_data(req_body: dict) -> tuple[dict, dict, dict, dict, str 
         Tuple of (company_data1, company_data2, company_data3, industry_data, error_message)
         error_message is None if validation passes.
     """
-    required = ["CompanyReseachData1", "CompanyReseachData2", "CompanyReseachData3", "IndustryResearch"]
+    required = ["CompanyResearchData1", "CompanyResearchData2", "CompanyResearchData3", "IndustryResearch"]
     missing = [k for k in required if k not in req_body]
     if missing:
-        return None, None, None, None, f"Missing required files: {', '.join(missing)}"
+        raise ValidationError(f"Missing required files: {', '.join(missing)}")
 
-    company_data1 = req_body["CompanyReseachData1"]
-    company_data2 = req_body["CompanyReseachData2"]
-    company_data3 = req_body["CompanyReseachData3"]
+    company_data1 = req_body["CompanyResearchData1"]
+    company_data2 = req_body["CompanyResearchData2"]
+    company_data3 = req_body["CompanyResearchData3"]
     industry_data = req_body["IndustryResearch"]
 
-    for obj in (company_data1, company_data2, company_data3, industry_data):
+    for name, obj in [
+        ("CompanyResearchData1", company_data1),
+        ("CompanyResearchData2", company_data2),
+        ("CompanyResearchData3", company_data3),
+        ("IndustryResearch", industry_data),
+    ]:
         if not isinstance(obj, dict):
-            return None, None, None, None, "All files must contain valid JSON objects"
+            raise ValidationError(f"Field '{name}' must be a valid JSON object")
 
     return company_data1, company_data2, company_data3, industry_data, None
 
@@ -211,9 +217,9 @@ def _create_success_response(
         "message": "Processed files and saved PPTX to Blob",
         "data": processed_data,
         "files_received": {
-            "CompanyReseachData1_size": len(company_data1),
-            "CompanyReseachData2_size": len(company_data2),
-            "CompanyReseachData3_size": len(company_data3),
+            "CompanyResearchData1_size": len(company_data1),
+            "CompanyResearchData2_size": len(company_data2),
+            "CompanyResearchData3_size": len(company_data3),
             "IndustryResearch_size": len(industry_data),
         },
         "output_file": {
@@ -243,9 +249,8 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
         req_body = req.get_json()
 
         # Validate request data
-        company_data1, company_data2, company_data3, industry_data, validation_error = _validate_request_data(req_body)
-        if validation_error:
-            return _create_error_response(validation_error, 400)
+        # Validation errors are now raised as exceptions
+        company_data1, company_data2, company_data3, industry_data, _ = _validate_request_data(req_body)
 
         # Log received data
         _log_received_data_keys(company_data1, company_data2, company_data3, industry_data)
@@ -282,6 +287,10 @@ def agent_httptrigger(req: func.HttpRequest) -> func.HttpResponse:
 
     except ValueError as e:
         return _create_error_response(f"Invalid JSON: {e}", 400)
+    except AppError as e:
+        # Handle our custom application errors (ValidationError, TemplateError)
+        logging.warning(f"Application error: {e}")
+        return _create_error_response(str(e), e.status_code)
     except Exception as e:
         logging.exception("Unexpected error")
         return _create_error_response(f"Internal server error: {e}", 500)

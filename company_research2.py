@@ -1,6 +1,7 @@
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
 
+from helpers.exceptions import TemplateError
 from helpers.utils import (
     _add_bullet_runs,
     _choose_link,
@@ -28,7 +29,7 @@ def fill_company_research2(prs: Presentation, payload: dict, company_name: str |
 
     slide, shape = _find_shape_with_token(prs, token)
     if not shape:
-        return
+        raise TemplateError(f"Token '{token}' not found in any slide")
 
     # Inferencia de nombre si no llega por parámetro
     if not company_name:

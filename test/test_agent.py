@@ -40,9 +40,9 @@ def test_agent_success(monkeypatch):
 
     # load payload files from test/payloads
     with (
-        open("test/payloads/CompanyReseachData1_v2.json") as f1,
-        open("test/payloads/CompanyReseachData2_v2.json") as f2,
-        open("test/payloads/CompanyReseachData3_v2.json") as f3,
+        open("test/payloads/CompanyResearchData1_v2.json") as f1,
+        open("test/payloads/CompanyResearchData2_v2.json") as f2,
+        open("test/payloads/CompanyResearchData3_v2.json") as f3,
         open("test/payloads/IndustryResearch.json") as fi,
     ):
         pd1 = json.load(f1)
@@ -51,9 +51,9 @@ def test_agent_success(monkeypatch):
         pdi = json.load(fi)
 
     payload = {
-        "CompanyReseachData1": pd1,
-        "CompanyReseachData2": pd2,
-        "CompanyReseachData3": pd3,
+        "CompanyResearchData1": pd1,
+        "CompanyResearchData2": pd2,
+        "CompanyResearchData3": pd3,
         "IndustryResearch": pdi,
     }
 
