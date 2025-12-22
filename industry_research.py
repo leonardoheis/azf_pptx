@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 from pptx import Presentation
@@ -19,7 +20,7 @@ from config import (
     TABLE_PARAGRAPH_FONT_SIZE_PT,
 )
 from helpers.exceptions import TemplateError
-from helpers.utils import estimate_row_height
+from helpers.utils import estimate_row_height, unwrap_first_data
 
 
 @dataclass
@@ -34,24 +35,30 @@ class TableDimensions:
     column_width_pt: float
 
 
-def fill_industry_slides(prs: Presentation, slide, payload: dict):
+def fill_industry_slides(prs: Presentation, payload: dict):
     """
-    Reemplaza {{IndustryResearch}} en `slide` con múltiples tablas según payload:
-    - Usa `payload_data['title']` como Título de slide.
-    - Usa `payload_data['headers']` como columnas.
-    - Usa `payload_data['rows']` como datos de fila.
-    - Corta en varias slides cuando excede espacio disponible.
+    Reemplaza {{IndustryResearch}} buscando automáticamente el placeholder en cualquier slide.
+    Usa payload['title'], payload['headers'] y payload['rows'] (tras normalizar payload['data'][0]).
+    Si faltan headers/rows, registra advertencia y no modifica la presentación.
     """
-    placeholder_position = _find_and_remove_placeholder(slide, "{{IndustryResearch}}")
-    if placeholder_position is None:
+    slide, placeholder_position = _locate_placeholder(prs, "{{IndustryResearch}}")
+    if not placeholder_position:
         raise TemplateError("Token '{{IndustryResearch}}' not found in any slide")
 
     left, top, width, height = placeholder_position
+    layout = slide.slide_layout
 
-    _set_slide_title(slide, payload)
+    # Normaliza payload (acepta wrapper con data[])
+    try:
+        payload_norm = unwrap_first_data(payload, "IndustryResearch")
+    except Exception as exc:
+        raise TemplateError(f"Invalid IndustryResearch payload: {exc}") from exc
 
-    headers, rows = _validate_and_extract_data(payload)
+    title_text = _set_slide_title(slide, payload_norm)
+
+    headers, rows = _validate_and_extract_data(payload_norm)
     if not headers or not rows:
+        logging.warning("IndustryResearch payload missing headers/rows; skipping slide rendering.")
         return
 
     dimensions = _calculate_table_dimensions(width, height, len(headers))
@@ -59,9 +66,8 @@ def fill_industry_slides(prs: Presentation, slide, payload: dict):
 
     chunks = _partition_rows_into_chunks(rows, row_heights, dimensions.content_height_pt)
 
-    layout = slide.slide_layout
     for idx, chunk in enumerate(chunks):
-        target_slide = _get_or_create_slide(prs, slide, layout, idx)
+        target_slide = _get_or_create_slide(prs, slide, layout, idx, title_text)
         table = _create_table(target_slide, chunk, headers, left, top, width, height)
         _format_table_header(table, headers, dimensions, width)
         _populate_table_data(table, chunk, headers)
@@ -126,10 +132,21 @@ def _find_and_remove_placeholder(slide, token: str) -> tuple[int, int, int, int]
     return None
 
 
-def _set_slide_title(slide, payload: dict) -> None:
-    """Sets the slide title from payload data."""
+def _locate_placeholder(prs: Presentation, token: str):
+    """Find first slide containing the token and remove it, returning (slide, bbox)."""
+    for slide in prs.slides:
+        position = _find_and_remove_placeholder(slide, token)
+        if position:
+            return slide, position
+    return None, None
+
+
+def _set_slide_title(slide, payload: dict) -> str:
+    """Sets the slide title from payload data. Returns the text used."""
     if slide.shapes.title:
         slide.shapes.title.text = payload.get("title", "")
+        return slide.shapes.title.text
+    return ""
 
 
 def _validate_and_extract_data(payload: dict) -> tuple[list, list]:
@@ -193,7 +210,7 @@ def _calculate_row_heights(rows: list, headers: list, dimensions: TableDimension
     return [estimate_row_height(row, headers, dimensions.line_height_pt, dimensions.column_width_pt) for row in rows]
 
 
-def _get_or_create_slide(prs: Presentation, original_slide, layout, chunk_index: int):
+def _get_or_create_slide(prs: Presentation, original_slide, layout, chunk_index: int, title_text: str):
     """
     Gets the original slide for the first chunk or creates a new slide for subsequent chunks.
 
@@ -211,7 +228,9 @@ def _get_or_create_slide(prs: Presentation, original_slide, layout, chunk_index:
 
     new_slide = prs.slides.add_slide(layout)
     if new_slide.shapes.title:
-        new_slide.shapes.title.text += " (cont.)"
+        new_slide.shapes.title.text = (
+            f"{title_text} (cont.)" if title_text else f"{new_slide.shapes.title.text} (cont.)"
+        )
 
     return new_slide
 

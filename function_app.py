@@ -16,6 +16,7 @@ from company_research3 import fill_company_research3
 from config import AZ_STORAGE_CONN_STRING  # may be None in local env
 from config import AZ_BLOB_CONTAINER_NAME, INPUT_TEMPLATE, get_next_output_filename
 from helpers.exceptions import AppError, ValidationError
+from helpers.utils import unwrap_first_data
 from industry_research import fill_industry_slides
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
@@ -109,6 +110,14 @@ def _validate_request_data(req_body: dict) -> tuple[dict, dict, dict, dict, str 
         if not isinstance(obj, dict):
             raise ValidationError(f"Field '{name}' must be a valid JSON object")
 
+    try:
+        company_data1 = unwrap_first_data(company_data1, "CompanyResearchData1")
+        company_data2 = unwrap_first_data(company_data2, "CompanyResearchData2")
+        company_data3 = unwrap_first_data(company_data3, "CompanyResearchData3")
+        industry_data = unwrap_first_data(industry_data, "IndustryResearch")
+    except ValueError as exc:
+        raise ValidationError(str(exc))
+
     return company_data1, company_data2, company_data3, industry_data, None
 
 
@@ -150,7 +159,7 @@ def _build_presentation(
     fill_company_research1(prs, company_data1)
     fill_company_research2(prs, company_data2)
     fill_company_research3(prs, company_data3)
-    fill_industry_slides(prs, prs.slides[len(prs.slides) - 1], industry_data)
+    fill_industry_slides(prs, industry_data)
 
     return prs
 

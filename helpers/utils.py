@@ -280,3 +280,29 @@ def _load_json(data_or_path):
         with open(data_or_path, encoding="utf-8") as f:
             return json.load(f)
     raise TypeError("Expected dict or JSON file path")
+
+
+def unwrap_first_data(payload: dict, label: str) -> dict:
+    """
+    Normalize payload structures that wrap content under payload['data'][0].
+
+    Returns the inner dict if present, otherwise returns the payload itself.
+    Raises ValueError when the structure is invalid or empty.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be an object")
+
+    if "data" not in payload:
+        return payload
+
+    data = payload.get("data")
+    if not isinstance(data, list):
+        raise ValueError(f"{label}['data'] must be a list")
+    if not data:
+        raise ValueError(f"{label}['data'] is empty")
+
+    first = data[0]
+    if not isinstance(first, dict):
+        raise ValueError(f"{label}['data'][0] must be an object")
+
+    return first

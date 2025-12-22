@@ -1,3 +1,5 @@
+import logging
+
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
 
@@ -27,6 +29,10 @@ def fill_company_research3(prs: Presentation, payload: dict):
     tf = shape.text_frame
     tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
     tf.clear()
+
+    if not payload:
+        logging.warning("CompanyResearch3 payload is empty; slide will be left blank.")
+        return
 
     # -------- helpers internos sin configuraciones externas --------
     def _section_items(section_value):

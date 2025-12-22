@@ -1,3 +1,5 @@
+import logging
+
 from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
 
@@ -28,6 +30,10 @@ def fill_company_research1(prs: Presentation, payload: dict):
     tf = shape.text_frame
     tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
     tf.clear()
+
+    if not payload:
+        logging.warning("CompanyResearch1 payload is empty; slide will be left blank.")
+        return
 
     # Ignore "Company Name" because the name goes through {{CompanyName}}
     for key, val in payload.items():
@@ -82,11 +88,14 @@ def _get_company_name_from_json(path_or_obj) -> str:
     except Exception as exc:
         raise ValueError(f"Failed to load company JSON: {exc}") from exc
 
-    # Se espera un {"data": [ { "Company Name": "..." , ... } ]}
+    # Accept either unwrapped dict or {"data": [ {...} ]}
+    if isinstance(data, dict) and "Company Name" in data:
+        return str(data.get("Company Name", "")).strip()
+
     try:
-        return data["data"][0].get("Company Name", "").strip()
+        return str(data["data"][0].get("Company Name", "")).strip()
     except Exception as exc:
-        raise ValueError("Company JSON missing expected 'data[0]['Company Name']' field") from exc
+        raise ValueError("Company JSON missing expected 'Company Name' field") from exc
 
 
 def fill_company_name_from_json(prs: Presentation, company_json_path: str):
