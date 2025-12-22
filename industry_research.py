@@ -48,6 +48,11 @@ def fill_industry_slides(prs: Presentation, payload: dict):
     left, top, width, height = placeholder_position
     layout = slide.slide_layout
 
+    # Capture potential upward shift (title area) to reuse the freed space on continuation slides.
+    title_shape = slide.shapes.title
+    cont_top = title_shape.top if title_shape else top
+    cont_height = height + (top - cont_top) if top > cont_top else height
+
     # Normaliza payload (acepta wrapper con data[])
     try:
         payload_norm = unwrap_first_data(payload, "IndustryResearch")
@@ -68,7 +73,10 @@ def fill_industry_slides(prs: Presentation, payload: dict):
 
     for idx, chunk in enumerate(chunks):
         target_slide = _get_or_create_slide(prs, slide, layout, idx, title_text)
-        table = _create_table(target_slide, chunk, headers, left, top, width, height)
+        # First chunk uses original bbox; continuations reclaim title space.
+        top_use = top if idx == 0 else cont_top - 10000
+        height_use = height if idx == 0 else cont_height
+        table = _create_table(target_slide, chunk, headers, left, top_use, width, height_use)
         _format_table_header(table, headers, dimensions, width)
         _populate_table_data(table, chunk, headers)
 
@@ -227,12 +235,16 @@ def _get_or_create_slide(prs: Presentation, original_slide, layout, chunk_index:
         return original_slide
 
     new_slide = prs.slides.add_slide(layout)
-    if new_slide.shapes.title:
-        new_slide.shapes.title.text = (
-            f"{title_text} (cont.)" if title_text else f"{new_slide.shapes.title.text} (cont.)"
-        )
-
+    _clear_placeholders(new_slide)
+    # No title on continuation pages to avoid vertical gap; table stays flush to bbox.
     return new_slide
+
+
+def _clear_placeholders(slide):
+    """Remove all placeholders from a slide (title/content) to free vertical space."""
+    for shape in list(slide.shapes):
+        if getattr(shape, "is_placeholder", False):
+            slide.shapes._spTree.remove(shape._element)
 
 
 def _create_table(slide, chunk: list, headers: list, left: int, top: int, width: int, height: int):
