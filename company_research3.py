@@ -26,13 +26,44 @@ def fill_company_research3(prs: Presentation, payload: dict):
     if not shape:
         raise TemplateError(f"Token '{token}' not found in any slide")
 
-    tf = shape.text_frame
-    tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-    tf.clear()
-
     if not payload:
         logging.warning("CompanyResearch3 payload is empty; slide will be left blank.")
         return
+
+    # Preserve placeholder geometry to reuse on cloned slides
+    base_left, base_top, base_width, base_height = shape.left, shape.top, shape.width, shape.height
+
+    # Gather sections in the original order
+    sections = list(payload.items())
+
+    # Ensure the first slide textbox is ready
+    tf_first = shape.text_frame
+    tf_first.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+    tf_first.clear()
+
+    def _add_slide_after(prs_obj: Presentation, ref_slide, layout):
+        """Add a slide and place it immediately after ref_slide."""
+        new_slide = prs_obj.slides.add_slide(layout)
+        sldIdLst = prs_obj.slides._sldIdLst  # reorder to desired position
+        new_id = sldIdLst[-1]
+        sldIdLst.remove(new_id)
+        ref_idx = list(prs_obj.slides).index(ref_slide)
+        sldIdLst.insert(ref_idx + 1, new_id)
+        return new_slide
+
+    # Helper to get or create target slide/shape for each chunk
+    def _get_target_tf(chunk_index: int):
+        if chunk_index == 0:
+            target_slide = slide
+            tf_local = tf_first
+        else:
+            target_slide = _add_slide_after(prs, slide, slide.slide_layout)
+            target_shape = target_slide.shapes.add_textbox(base_left, base_top, base_width, base_height)
+            tf_local = target_shape.text_frame
+            tf_local.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            tf_local.clear()
+            logging.info("CompanyResearch3 added continuation slide #%s", chunk_index + 1)
+        return target_slide, tf_local
 
     # -------- helpers internos sin configuraciones externas --------
     def _section_items(section_value):
@@ -197,24 +228,27 @@ def fill_company_research3(prs: Presentation, payload: dict):
         _add_bullet(tf, f"{label}: {vtxt}", level=level, size=12)
 
     # -------- recorrido genérico de secciones (en orden de aparición) --------
-    for section_name, section_value in payload.items():
-        items, meta = _section_items(section_value)
-        suffix = _section_suffix_from_meta(meta)
-        _add_section_header(tf, f"{section_name}{suffix}:")
+    # Render two section headers per slide (generic, no hardcoded titles)
+    for idx in range(0, len(sections), 2):
+        _, tf = _get_target_tf(idx // 2)
+        for section_name, section_value in sections[idx : idx + 2]:
+            items, meta = _section_items(section_value)
+            suffix = _section_suffix_from_meta(meta)
+            _add_section_header(tf, f"{section_name}{suffix}:")
 
-        for it in items:
-            if isinstance(it, dict):
-                mk, mv = _choose_main_text(it)
-                _add_bullet(tf, mv, level=0, size=14)
+            for it in items:
+                if isinstance(it, dict):
+                    mk, mv = _choose_main_text(it)
+                    _add_bullet(tf, mv, level=0, size=14)
 
-                # subcampos del ítem
-                for sk in _order_subkeys(it, mk):
-                    sv = it.get(sk)
-                    _emit_value_as_bullets(sk, sv, level=1)
-            elif isinstance(it, list):
-                # lista de primitivas en un ítem
-                for x in it:
-                    _add_bullet(tf, str(x), level=0, size=14)
-            else:
-                # primitivo
-                _add_bullet(tf, str(it), level=0, size=14)
+                    # subcampos del ítem
+                    for sk in _order_subkeys(it, mk):
+                        sv = it.get(sk)
+                        _emit_value_as_bullets(sk, sv, level=1)
+                elif isinstance(it, list):
+                    # lista de primitivas en un ítem
+                    for x in it:
+                        _add_bullet(tf, str(x), level=0, size=14)
+                else:
+                    # primitivo
+                    _add_bullet(tf, str(it), level=0, size=14)
