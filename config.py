@@ -17,8 +17,13 @@ AZ_BLOB_TABLE_NAME = "pptxactivity"
 # Thread Configuration
 THREAD_TIMEOUT_MINUTES = int(os.environ.get("ThreadTimeout", "30"))
 
-# Conversion factor: 1 pt = 12700 EMU
+# Conversion factors
+# 1 pt = 12700 EMU; 1 inch = 914400 EMU (72 pt per inch)
 EMU_PER_PT = 12700
+EMU_PER_INCH = 914400
+
+# Industry continuation table uplift (inches) to reclaim title space on continuation slides
+INDUSTRY_CONTINUATION_UPLIFT_INCH = 0.4
 
 INPUT_TEMPLATE = "template/plantilla.pptx"
 

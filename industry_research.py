@@ -9,7 +9,9 @@ from pptx.util import Pt
 
 from config import (
     DICT_LIST_CONTENT_FONT_SIZE_PT,
+    EMU_PER_INCH,
     EMU_PER_PT,
+    INDUSTRY_CONTINUATION_UPLIFT_INCH,
     MULTILINE_CONTENT_FONT_SIZE_PT,
     SIMPLE_CONTENT_FONT_SIZE_PT,
     SIMPLE_LIST_CONTENT_FONT_SIZE_PT,
@@ -20,7 +22,7 @@ from config import (
     TABLE_PARAGRAPH_FONT_SIZE_PT,
 )
 from helpers.exceptions import TemplateError
-from helpers.utils import estimate_row_height, unwrap_first_data
+from helpers.utils import _remove_shape_and_get_bbox, estimate_row_height, unwrap_first_data
 
 
 @dataclass
@@ -41,17 +43,9 @@ def fill_industry_slides(prs: Presentation, payload: dict):
     Usa payload['title'], payload['headers'] y payload['rows'] (tras normalizar payload['data'][0]).
     Si faltan headers/rows, registra advertencia y no modifica la presentación.
     """
-    slide, placeholder_position = _locate_placeholder(prs, "{{IndustryResearch}}")
-    if not placeholder_position:
+    slide, placeholder_shape = _find_placeholder(prs, "{{IndustryResearch}}")
+    if not placeholder_shape:
         raise TemplateError("Token '{{IndustryResearch}}' not found in any slide")
-
-    left, top, width, height = placeholder_position
-    layout = slide.slide_layout
-
-    # Manually lift continuation slides to reclaim the missing title area.
-    UPLIFT_EMU = int(0.4 * 914400)  # move up ~0.4 inches; adjust if needed
-    cont_top = max(0, top - UPLIFT_EMU)
-    cont_height = height + (top - cont_top)
 
     # Normaliza payload (acepta wrapper con data[])
     try:
@@ -65,6 +59,15 @@ def fill_industry_slides(prs: Presentation, payload: dict):
     if not headers or not rows:
         logging.warning("IndustryResearch payload missing headers/rows; skipping slide rendering.")
         return
+
+    # Remueve placeholder solo cuando hay datos válidos para no dejar la slide vacía.
+    left, top, width, height = _remove_shape_and_get_bbox(placeholder_shape)
+    layout = slide.slide_layout
+
+    # Manually lift continuation slides to reclaim the missing title area.
+    UPLIFT_EMU = int(INDUSTRY_CONTINUATION_UPLIFT_INCH * EMU_PER_INCH)
+    cont_top = max(0, top - UPLIFT_EMU)
+    cont_height = height + (top - cont_top)
 
     dimensions = _calculate_table_dimensions(width, height, len(headers))
     row_heights = _calculate_row_heights(rows, headers, dimensions)
@@ -117,35 +120,12 @@ def _partition_rows_into_chunks(rows: list, row_heights: list, available_height_
     return chunks
 
 
-def _find_and_remove_placeholder(slide, token: str) -> tuple[int, int, int, int] | None:
-    """
-    Finds and removes a placeholder shape containing the specified token.
-
-    Args:
-        slide: PowerPoint slide object
-        token: Text token to search for in shapes
-
-    Returns:
-        Tuple of (left, top, width, height) if placeholder found, None otherwise
-    """
-    for shape in slide.shapes:
-        if not shape.has_text_frame:
-            continue
-
-        if token in shape.text_frame.text:
-            position = (shape.left, shape.top, shape.width, shape.height)
-            slide.shapes._spTree.remove(shape._element)
-            return position
-
-    return None
-
-
-def _locate_placeholder(prs: Presentation, token: str):
-    """Find first slide containing the token and remove it, returning (slide, bbox)."""
+def _find_placeholder(prs: Presentation, token: str):
+    """Find first slide and shape containing the token without removing it."""
     for slide in prs.slides:
-        position = _find_and_remove_placeholder(slide, token)
-        if position:
-            return slide, position
+        for shape in slide.shapes:
+            if getattr(shape, "has_text_frame", False) and token in shape.text_frame.text:
+                return slide, shape
     return None, None
 
 
