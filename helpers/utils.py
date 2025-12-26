@@ -17,7 +17,7 @@ def _set_font_size(run, size_pt=8, bold=False, color=None):
 
 
 def _find_shape_with_token(prs: Presentation, token: str):
-    """Busca el primer shape que contenga el token en toda la presentación."""
+    """Return the first shape in the presentation that contains the token."""
     for slide in prs.slides:
         for shape in slide.shapes:
             if getattr(shape, "has_text_frame", False) and token in shape.text_frame.text:
@@ -26,9 +26,9 @@ def _find_shape_with_token(prs: Presentation, token: str):
 
 
 def _replace_token_in_shape_text(shape, token: str, value: str):
-    """Reemplaza token por value respetando el resto del texto del shape."""
+    """Replace the token with value while preserving the rest of the shape text."""
     tf = shape.text_frame
-    # Reemplazo en todos los párrafos/runs
+    # Replace across all paragraphs/runs
     for p in tf.paragraphs:
         new_text = p.text.replace(token, value)
         if new_text != p.text:
@@ -36,7 +36,7 @@ def _replace_token_in_shape_text(shape, token: str, value: str):
 
 
 def _replace_company_name_everywhere(prs: Presentation, name: str):
-    """Reemplaza {{CompanyName}} y {{ CompanyName }} en todas las shapes de la presentación."""
+    """Replace {{CompanyName}} tokens across all shapes in the presentation."""
     tokens = ["{{CompanyName}}", "{{ CompanyName }}"]
     for slide in prs.slides:
         for shape in slide.shapes:
@@ -47,7 +47,7 @@ def _replace_company_name_everywhere(prs: Presentation, name: str):
 
 
 def _remove_shape_and_get_bbox(shape):
-    """Elimina el shape y devuelve su bounding box para reubicar contenido (tablas, etc.)."""
+    """Remove the shape and return its bounding box for reuse (tables, etc.)."""
     left, top, width, height = shape.left, shape.top, shape.width, shape.height
     shape._element.getparent().remove(shape._element)
     return left, top, width, height
@@ -100,11 +100,11 @@ def _extract_urls(obj) -> list[str]:
 
 
 def _parse_date(s: str) -> str:
-    """Devuelve fecha legible si reconoce ISO/AAAA-MM-DD/AAAA-MM/AAAA."""
+    """Return a readable date if ISO/YYYY-MM-DD/YYYY-MM/YYYY is recognized."""
     if not isinstance(s, str) or not s.strip():
         return ""
     t = s.strip()
-    # Normalizaciones mínimas
+    # Minimal normalizations
     try:
         # ISO completo
         return datetime.fromisoformat(t).strftime("%B %d, %Y")
@@ -127,7 +127,7 @@ def _parse_date(s: str) -> str:
 
 
 def _parse_number(x):
-    """Intenta convertir a número (acepta '97.69 billion', '$97,690,000,000', etc.)."""
+    """Try to coerce to a number (accepts '97.69 billion', '$97,690,000,000', etc.)."""
     if x is None:
         return None
     if isinstance(x, (int, float)):
@@ -143,7 +143,7 @@ def _parse_number(x):
         )
         mult = 1e9 if m.group(2).lower() == "billion" else 1e6
         return base * mult
-    # quitar símbolos
+    # strip symbols
     s = re.sub(r"[^\d\.\-]", "", s)
     try:
         return float(s)
@@ -161,7 +161,7 @@ def _fmt_billions_usd(n):
 
 
 def _parse_percent(x):
-    """Devuelve float 0-100 si puede."""
+    """Return float 0-100 if possible."""
     if x is None:
         return None
     if isinstance(x, (int, float)):
@@ -175,7 +175,7 @@ def _parse_percent(x):
 
 
 def _choose_link(*candidates):
-    """Elige un link preferente (prioriza SEC si existe)."""
+    """Pick a preferred link (prioritize sec.gov when present)."""
     urls = []
     for c in candidates:
         if isinstance(c, str) and _is_url(c):
@@ -190,7 +190,7 @@ def _choose_link(*candidates):
 
 
 def _find_in_dict(d: dict, key_synonyms: list[str]) -> dict | None:
-    """Busca en el nivel actual una clave whose normalized name contiene alguno de los sinónimos."""
+    """Search current level for a key whose normalized name matches any synonym."""
     for k, v in d.items():
         nk = _norm(k)
         if any(s in nk for s in key_synonyms):
@@ -199,7 +199,7 @@ def _find_in_dict(d: dict, key_synonyms: list[str]) -> dict | None:
 
 
 def _deep_find(d: dict, key_synonyms: list[str]) -> dict | None:
-    """Búsqueda recursiva si no aparece a primer nivel."""
+    """Recursive search when not found at the first level."""
     hit = _find_in_dict(d, key_synonyms)
     if hit is not None:
         return hit
@@ -218,7 +218,7 @@ def _deep_find(d: dict, key_synonyms: list[str]) -> dict | None:
 
 
 def _get_first_str(d: dict, key_synonyms: list[str]) -> str:
-    """Devuelve el primer string que coincida con alguno de los sinónimos (profundidad 1)."""
+    """Return the first string matching any synonym (depth 1)."""
     for k, v in d.items():
         if any(s in _norm(k) for s in key_synonyms):
             if isinstance(v, str):

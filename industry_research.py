@@ -39,9 +39,9 @@ class TableDimensions:
 
 def fill_industry_slides(prs: Presentation, payload: dict):
     """
-    Reemplaza {{IndustryResearch}} buscando automáticamente el placeholder en cualquier slide.
-    Usa payload['title'], payload['headers'] y payload['rows'] (tras normalizar payload['data'][0]).
-    Si faltan headers/rows, registra advertencia y no modifica la presentación.
+    Replace the {{IndustryResearch}} token by locating the placeholder on any slide.
+    Uses payload['title'], payload['headers'], payload['rows'] (after unwrapping payload['data'][0]).
+    If headers/rows are missing, it logs a warning and leaves the presentation unchanged.
     """
     slide, placeholder_shape = _find_placeholder(prs, "{{IndustryResearch}}")
     if not placeholder_shape:
