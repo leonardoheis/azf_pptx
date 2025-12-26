@@ -42,13 +42,16 @@ def fill_company_research3(prs: Presentation, payload: dict):
     tf_first.clear()
 
     def _add_slide_after(prs_obj: Presentation, ref_slide, layout):
-        """Add a slide and place it immediately after ref_slide."""
+        """Add a slide, place it immediately after ref_slide, and clear existing shapes."""
         new_slide = prs_obj.slides.add_slide(layout)
         sldIdLst = prs_obj.slides._sldIdLst  # reorder to desired position
         new_id = sldIdLst[-1]
         sldIdLst.remove(new_id)
         ref_idx = list(prs_obj.slides).index(ref_slide)
         sldIdLst.insert(ref_idx + 1, new_id)
+        # Remove any shapes/placeholders so we paste only the new content we add next
+        for shp in list(new_slide.shapes):
+            new_slide.shapes._spTree.remove(shp._element)
         return new_slide
 
     # Helper to get or create target slide/shape for each chunk
