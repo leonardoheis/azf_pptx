@@ -48,10 +48,10 @@ def fill_industry_slides(prs: Presentation, payload: dict):
     left, top, width, height = placeholder_position
     layout = slide.slide_layout
 
-    # Capture potential upward shift (title area) to reuse the freed space on continuation slides.
-    title_shape = slide.shapes.title
-    cont_top = title_shape.top if title_shape else top
-    cont_height = height + (top - cont_top) if top > cont_top else height
+    # Manually lift continuation slides to reclaim the missing title area.
+    UPLIFT_EMU = int(0.4 * 914400)  # move up ~0.4 inches; adjust if needed
+    cont_top = max(0, top - UPLIFT_EMU)
+    cont_height = height + (top - cont_top)
 
     # Normaliza payload (acepta wrapper con data[])
     try:
@@ -74,7 +74,7 @@ def fill_industry_slides(prs: Presentation, payload: dict):
     for idx, chunk in enumerate(chunks):
         target_slide = _get_or_create_slide(prs, slide, layout, idx, title_text)
         # First chunk uses original bbox; continuations reclaim title space.
-        top_use = top if idx == 0 else cont_top - 10000
+        top_use = top if idx == 0 else cont_top
         height_use = height if idx == 0 else cont_height
         table = _create_table(target_slide, chunk, headers, left, top_use, width, height_use)
         _format_table_header(table, headers, dimensions, width)
