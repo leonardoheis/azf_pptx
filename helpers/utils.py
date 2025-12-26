@@ -70,11 +70,11 @@ def _add_bullet(tf, text: str, level: int = 0, size: int = 14):
         _set_font_size(run, size_pt=size)
 
 
-def _fmt_currency(n: int | float, prefix="$"):
-    try:
-        return f"{prefix}{int(n):,}".replace(",", ".")  # separador miles estilo LATAM opcional
-    except Exception:
-        return str(n)
+# def _fmt_currency(n: int | float, prefix="$"):
+#    try:
+#        return f"{prefix}{int(n):,}".replace(",", ".")  # separador miles estilo LATAM opcional
+#    except Exception:
+#        return str(n)
 
 
 def _norm(s: str) -> str:

@@ -190,20 +190,20 @@ def _upload_presentation_to_blob(buf: BytesIO, output_filename: str) -> str:
     return blob_url
 
 
-def _create_table_entity(
-    company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict, processed_data: dict
-) -> dict:
-    """Create a table entity for logging processed data."""
-    return {
-        "PartitionKey": "processed_files",
-        "RowKey": datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"),
-        "CompanyData1Keys": json.dumps(list(company_data1.keys())),
-        "CompanyData2Keys": json.dumps(list(company_data2.keys())),
-        "CompanyData3Keys": json.dumps(list(company_data3.keys())),
-        "IndustryDataKeys": json.dumps(list(industry_data.keys())),
-        "ProcessedData": json.dumps(processed_data),
-        "Timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+# def _create_table_entity(
+#    company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict, processed_data: dict
+# ) -> dict:
+#    """Create a table entity for logging processed data."""
+#    return {
+#        "PartitionKey": "processed_files",
+#        "RowKey": datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"),
+#        "CompanyData1Keys": json.dumps(list(company_data1.keys())),
+#        "CompanyData2Keys": json.dumps(list(company_data2.keys())),
+#        "CompanyData3Keys": json.dumps(list(company_data3.keys())),
+#        "IndustryDataKeys": json.dumps(list(industry_data.keys())),
+#        "ProcessedData": json.dumps(processed_data),
+#        "Timestamp": datetime.now(timezone.utc).isoformat(),
+#    }
 
 
 # def _log_to_table(entity: dict) -> None:
