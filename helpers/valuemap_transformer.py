@@ -1,0 +1,188 @@
+"""
+ValueMap to IndustryResearch transformer module.
+
+Transforms ValueMap BenefitTable format into the IndustryResearch table format
+expected by the PowerPoint generation logic.
+"""
+
+import logging
+from typing import Any
+
+# Keys to exclude from the flattened row output (complex nested objects)
+EXCLUDED_KEYS = {"Inputs"}
+
+# Default headers order (preferred column ordering)
+PREFERRED_HEADER_ORDER = [
+    "Challenge",
+    "Description",
+    "ScenarioRecordID",
+    "KPI",
+    "Workload",
+    "BenefitFormula",
+    "CalculatedBenefit",
+    "BenefitCurrency",
+    "Notes",
+]
+
+
+def is_valuemap_format(data: dict) -> bool:
+    """
+    Check if the data is in ValueMap format (has BenefitTable key).
+
+    Args:
+        data: Dictionary to check
+
+    Returns:
+        True if data contains BenefitTable key with a list value
+    """
+    if not isinstance(data, dict):
+        return False
+    benefit_table = data.get("BenefitTable")
+    return isinstance(benefit_table, list)
+
+
+def transform_valuemap_to_industry_research(
+    valuemap: dict,
+    company_name: str = "",
+) -> dict:
+    """
+    Transform ValueMap BenefitTable into IndustryResearch format.
+
+    Args:
+        valuemap: Dictionary containing BenefitTable array
+        company_name: Optional company name for title generation
+
+    Returns:
+        Dictionary with title, headers, and rows keys
+
+    Raises:
+        ValueError: If BenefitTable is missing or empty
+    """
+    benefit_table = valuemap.get("BenefitTable")
+
+    if not isinstance(benefit_table, list):
+        raise ValueError("ValueMap must contain a 'BenefitTable' array")
+
+    if not benefit_table:
+        raise ValueError("BenefitTable array is empty")
+
+    # Extract headers from first row, excluding complex nested objects
+    headers = _extract_headers(benefit_table[0])
+
+    # Transform rows, keeping only the headers we extracted
+    rows = _transform_rows(benefit_table, headers)
+
+    # Generate title
+    title = _generate_title(company_name)
+
+    result = {
+        "title": title,
+        "headers": headers,
+        "rows": rows,
+    }
+
+    logging.info(
+        "Transformed ValueMap to IndustryResearch: %d headers, %d rows",
+        len(headers),
+        len(rows),
+    )
+
+    return result
+
+
+def _extract_headers(first_row: dict) -> list[str]:
+    """
+    Extract headers from the first row of BenefitTable.
+
+    Excludes complex nested objects (like Inputs) and orders headers
+    according to preferred order when possible.
+
+    Args:
+        first_row: First row of the BenefitTable
+
+    Returns:
+        List of header strings in preferred order
+    """
+    if not isinstance(first_row, dict):
+        raise ValueError("BenefitTable rows must be objects")
+
+    # Get all keys excluding complex nested objects
+    raw_headers = [
+        key for key in first_row.keys() if key not in EXCLUDED_KEYS and not _is_complex_value(first_row[key])
+    ]
+
+    # Sort headers: preferred order first, then remaining alphabetically
+    ordered_headers = []
+    remaining_headers = set(raw_headers)
+
+    for preferred in PREFERRED_HEADER_ORDER:
+        if preferred in remaining_headers:
+            ordered_headers.append(preferred)
+            remaining_headers.remove(preferred)
+
+    # Add remaining headers alphabetically
+    ordered_headers.extend(sorted(remaining_headers))
+
+    return ordered_headers
+
+
+def _is_complex_value(value: Any) -> bool:
+    """
+    Check if a value is too complex to include in table output.
+
+    Args:
+        value: Value to check
+
+    Returns:
+        True if value is a dict or list of dicts (complex nested structure)
+    """
+    if isinstance(value, dict):
+        return True
+    if isinstance(value, list) and value and isinstance(value[0], dict):
+        return True
+    return False
+
+
+def _transform_rows(benefit_table: list[dict], headers: list[str]) -> list[dict]:
+    """
+    Transform BenefitTable rows to include only the specified headers.
+
+    Args:
+        benefit_table: List of row dictionaries
+        headers: List of header keys to include
+
+    Returns:
+        List of row dictionaries with only the specified keys
+    """
+    rows = []
+    for row in benefit_table:
+        if not isinstance(row, dict):
+            logging.warning("Skipping non-dict row in BenefitTable")
+            continue
+
+        transformed_row = {}
+        for header in headers:
+            value = row.get(header, "")
+            # Convert None to empty string for consistency
+            if value is None:
+                value = ""
+            transformed_row[header] = value
+
+        rows.append(transformed_row)
+
+    return rows
+
+
+def _generate_title(company_name: str) -> str:
+    """
+    Generate a title for the IndustryResearch table.
+
+    Args:
+        company_name: Company name to include in title
+
+    Returns:
+        Generated title string
+    """
+    if company_name and company_name.strip():
+        return f"{company_name.strip()} Value Map Benefit Table"
+    return "Value Map Benefit Table"

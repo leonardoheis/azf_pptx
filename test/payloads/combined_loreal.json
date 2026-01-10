@@ -1,0 +1,240 @@
+{
+  "CompanyResearchData1": {
+    "Company Name": "L'Oréal S.A.",
+    "Profile": {
+      "Description": "L'Oréal S.A. is a global cosmetics and beauty company headquartered in Clichy, France. Founded in 1909 by Eugène Schueller, it manufactures and sells a wide range of beauty products including skin care, hair care, makeup, perfumes, and dermocosmetics. The company operates through four main divisions: Professional Products (used and sold in hair salons), Consumer Products (mass market retail), L'Oréal Luxe (high-end beauty products), and Active Cosmetics (dermocosmetic skincare sold in pharmacies). L'Oréal markets its products globally through various channels including offline and online retailers, salons, pharmacies, and travel retail.",
+      "Industry": "Consumer Goods",
+      "Core Mission": "To offer innovative beauty products and solutions that meet diverse consumer needs worldwide, focusing on digital innovation, sustainability, and market leadership in the beauty industry.",
+      "Ownership": {
+        "Type": "Public",
+        "Stock Exchange": "Euronext Paris",
+        "Ticker": "OR"
+      }
+    },
+    "Website": "https://www.loreal.com/en/",
+    "Headquarters and Global Footprint": {
+      "Headquarters": {
+        "City": "Clichy",
+        "Country": "France",
+        "Source": "https://www.forbes.com/companies/loreal/"
+      },
+      "Major Subsidiaries": [
+        {
+          "Name": "L'Oréal India Private Limited",
+          "Function": "Local operations and sales in India",
+          "Location": "India",
+          "Source": "https://tracxn.com/d/companies/loral/__rEQs4YunivoJHYj6eZNW0Rv2suTc0RL5A-e8A0dTeBA"
+        },
+        {
+          "Name": "L'Oréal (Thailand) Company Limited",
+          "Function": "Local operations and sales in Thailand",
+          "Location": "Thailand",
+          "Source": "https://tracxn.com/d/companies/loral/__rEQs4YunivoJHYj6eZNW0Rv2suTc0RL5A-e8A0dTeBA"
+        },
+        {
+          "Name": "L'Oréal Norge AS",
+          "Function": "Local operations and sales in Norway",
+          "Location": "Norway",
+          "Source": "https://tracxn.com/d/companies/loral/__rEQs4YunivoJHYj6eZNW0Rv2suTc0RL5A-e8A0dTeBA"
+        }
+      ],
+      "Operational Footprint": "L'Oréal operates globally with a presence in over 150 countries, selling products through multiple channels including salons, pharmacies, mass market retail, e-commerce, and travel retail. It has a diversified portfolio of brands catering to various market segments worldwide.",
+      "Source": "https://www.forbes.com/companies/loreal/"
+    },
+    "Organizational Structure": {
+      "Overview": "L'Oréal is organized into four main business divisions: Professional Products, Consumer Products, L'Oréal Luxe, and Active Cosmetics. Each division focuses on specific product categories and distribution channels, supported by global functions such as marketing, R&D, and supply chain.",
+      "Management Structure": "The company is led by CEO Nicolas Hieronimus, supported by a Deputy CEO and a Chief Financial Officer. The board includes key executives and independent directors, with governance aligned to public company standards.",
+      "Source": "https://www.bloomberg.com/profile/company/OR:FP"
+    },
+    "Main Business Units": [
+      {
+        "Name": "Professional Products",
+        "Description": "Manufactures and markets hair care and styling products used and sold in hair salons worldwide.",
+        "Source": "https://www.forbes.com/companies/loreal/"
+      },
+      {
+        "Name": "Consumer Products",
+        "Description": "Offers beauty and personal care products for men and women sold through mass market retail channels.",
+        "Source": "https://www.forbes.com/companies/loreal/"
+      },
+      {
+        "Name": "L'Oréal Luxe",
+        "Description": "Markets high-end skin care, makeup, and fragrance products through selective retail outlets such as department stores and perfumeries.",
+        "Source": "https://www.forbes.com/companies/loreal/"
+      },
+      {
+        "Name": "Active Cosmetics",
+        "Description": "Provides dermocosmetic skincare products sold in pharmacies and specialist drugstore sections.",
+        "Source": "https://www.forbes.com/companies/loreal/"
+      }
+    ]
+  },
+  "CompanyResearchData2": {
+    "Revenue": {
+      "Amount": 47400000000,
+      "Fiscal Year Close Date": "2024-12-31",
+      "Type": "Fact",
+      "Source": "https://stockanalysis.com/quote/otc/LRLCY/revenue/"
+    },
+    "Industry Average Gross Margin": {
+      "Industry": "Consumer Goods",
+      "Average Gross Margin": "Not found in current search results",
+      "Source": "Not available"
+    },
+    "Company Gross Margin": {
+      "Gross Margin": 74.2,
+      "Fiscal Year Close Date": "2024-12-31",
+      "Type": "Fact",
+      "Source": "https://finance.yahoo.com/news/loreal-sa-lrlcf-fy-2024-070232218.html"
+    },
+    "Employee Count": {
+      "Headcount": 94397,
+      "As Of": "2024-12-31",
+      "Source": "https://stockanalysis.com/quote/otc/LRLCY/revenue/"
+    }
+  },
+  "CompanyResearchData3": {
+    "Latest Relevant News": [
+      {
+        "Headline": "L'Oréal awarded unprecedented 10th consecutive AAA rating from CDP for environmental leadership",
+        "Summary": "L'Oréal received a triple-A rating by CDP for the 10th year running, recognizing its leadership in corporate transparency and performance on climate change, forests, and water security.",
+        "Date published": "December 12, 2025",
+        "Full source hyperlink": "https://www.loreal.com/en/press-release/"
+      },
+      {
+        "Headline": "L'Oréal to reinforce strategic investment in Galderma with additional 10% stake",
+        "Summary": "L'Oréal announced acquisition of an additional 10% stake in Galderma Group AG, bringing its total participation to 20%, signaling a strategic move in dermatology.",
+        "Date published": "December 8, 2025",
+        "Full source hyperlink": "https://www.loreal.com/en/press-release/"
+      },
+      {
+        "Headline": "L'Oréal reports 3.0% like-for-like growth in first half of 2025 with €22.47 billion sales",
+        "Summary": "L'Oréal's sales grew 3.0% like-for-like in H1 2025, driven by strong emerging markets, recovery in mainland China, and growth in professional products and fragrances. Operating margin increased to 21.1%.",
+        "Date published": "July 29, 2025",
+        "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+      }
+    ],
+    "Strategy": [
+      {
+        "Title": "Sustainable Innovation Accelerator with €100 million investment",
+        "Summary": "L'Oréal launched a €100 million Sustainable Innovation Accelerator to invest in breakthrough technologies addressing sustainability challenges such as low-carbon processes, alternative ingredients, and eliminating fossil plastic use, aligned with its 10-year sustainability strategy.",
+        "Full source hyperlink": "https://thefinancialanalyst.net/2025/05/12/loreal-launches-e100m-push-for-beauty-industrys-green-future/"
+      },
+      {
+        "Title": "Multi-polar growth model focusing on emerging markets, China, and North America",
+        "Summary": "L'Oréal's growth strategy emphasizes accelerating like-for-like growth through strong presence in emerging markets, a rebound in mainland China, and recovery in North America, supported by innovation and brand launches.",
+        "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+      },
+      {
+        "Title": "Expansion through strategic acquisitions and portfolio optimization",
+        "Summary": "L'Oréal continues to expand its brand portfolio with acquisitions such as Medik8 and Color Wow, while divesting non-core brands like Carol's Daughter to focus on high-growth segments and innovation.",
+        "Full source hyperlink": "https://mandaequilibrium.com/a-strategic-look-at-loreals-mergers-and-acquisitions/"
+      }
+    ],
+    "Strategic Objectives": {
+      "Fiscal Year Close Date": "December 31, 2025",
+      "Objectives": [
+        {
+          "Objective": "Achieve 100% renewable energy and 90% biobased materials sourcing by 2030",
+          "Full source hyperlink": "https://thefinancialanalyst.net/2025/05/12/loreal-launches-e100m-push-for-beauty-industrys-green-future/"
+        },
+        {
+          "Objective": "Reduce virgin plastic use by 50% and Scope 1 and 2 emissions by 57% by 2030",
+          "Full source hyperlink": "https://thefinancialanalyst.net/2025/05/12/loreal-launches-e100m-push-for-beauty-industrys-green-future/"
+        },
+        {
+          "Objective": "Sustain accelerated like-for-like sales growth above 3% with margin expansion",
+          "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+        }
+      ]
+    },
+    "Key Business KPIs": [
+      {
+        "KPI Name": "Like-for-like sales growth",
+        "Current Value": "3.0% (H1 2025)",
+        "Target Value": "Accelerate growth in subsequent quarters",
+        "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+      },
+      {
+        "KPI Name": "Operating margin",
+        "Current Value": "21.1% (H1 2025)",
+        "Target Value": "Further margin expansion",
+        "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+      },
+      {
+        "KPI Name": "Net profit excluding non-recurring items",
+        "Current Value": "€3.78 billion (H1 2025)",
+        "Target Value": "Sustain profit growth",
+        "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+      }
+    ],
+    "Challenges": [
+      {
+        "Business Challenge": "Sustainability in complex supply chains",
+        "Summary": "L'Oréal faces challenges in reducing environmental impact across its long and intricate supply chains, including sourcing, production, and packaging.",
+        "Description": "The company aims to achieve ambitious sustainability targets such as 100% renewable energy and significant reductions in plastic use and emissions, requiring innovation and collaboration across its value chain.",
+        "Full source hyperlink": "https://thefinancialanalyst.net/2025/05/12/loreal-launches-e100m-push-for-beauty-industrys-green-future/"
+      },
+      {
+        "Business Challenge": "Maintaining growth amid geopolitical and economic tensions",
+        "Summary": "L'Oréal must navigate economic uncertainties and geopolitical tensions that impact regional markets differently, especially in Europe and North Asia.",
+        "Description": "The company's multi-polar model helps offset slowdowns in some regions with growth in others, but requires agile market strategies and digital transformation to sustain growth.",
+        "Full source hyperlink": "https://www.loreal-finance.com/eng/press-release/2025-half-year-results"
+      },
+      {
+        "Business Challenge": "Digital transformation and innovation adoption",
+        "Summary": "To stay competitive, L'Oréal invests heavily in AI, AR, and digital tools to enhance customer engagement and personalization.",
+        "Description": "Integrating advanced technologies like virtual try-on apps and skin diagnostics requires ongoing R&D investment and enterprise software solutions to scale effectively.",
+        "Full source hyperlink": "https://cosmeticsbusiness.com/l-or%C3%A9al-crowned-most-future-ready-beauty-company-of"
+      },
+      {
+        "Business Challenge": "Portfolio management and brand optimization",
+        "Summary": "L'Oréal continuously evaluates its brand portfolio to focus on high-growth and innovative brands while divesting underperforming or non-core assets.",
+        "Description": "This requires data-driven decision-making and agile enterprise resource planning to manage acquisitions and divestitures efficiently.",
+        "Full source hyperlink": "https://mandaequilibrium.com/a-strategic-look-at-loreals-mergers-and-acquisitions/"
+      },
+      {
+        "Business Challenge": "Scaling sustainable innovation across the industry",
+        "Summary": "L'Oréal aims to lead industry-wide sustainability transformation by investing in startups and technologies that can be piloted and scaled.",
+        "Description": "Creating an inclusive ecosystem for sustainable innovation involves collaboration with external partners and leveraging low-code and AI enterprise software for rapid development and deployment.",
+        "Full source hyperlink": "https://thefinancialanalyst.net/2025/05/12/loreal-launches-e100m-push-for-beauty-industrys-green-future/"
+      }
+    ]
+  },
+  "ValueMap": {
+    "BenefitTable": [
+      {
+        "Challenge": "Sustainability in complex supply chains",
+        "Description": "Optimize days in inventory (DII) by integrating supply chain ecosystem to reduce inventory levels and capital costs.",
+        "ScenarioRecordID": 6113,
+        "KPI": "Optimize days in inventory (DII)",
+        "Workload": "Dynamics 365 Intelligent Order Management",
+        "BenefitFormula": "Total Inventory * Capital Opportunity Cost (%) * Days in inventory improvement (%)",
+        "Inputs": {
+          "TotalInventory": 5000000000,
+          "CapitalOpportunityCostPercent": 0.08,
+          "DaysInInventoryImprovementPercent": 0.1
+        },
+        "CalculatedBenefit": 40000000,
+        "BenefitCurrency": "EUR",
+        "Notes": "Benefit represents capital cost savings from inventory reduction."
+      },
+      {
+        "Challenge": "Digital transformation and innovation adoption",
+        "Description": "Reduce selling cost by improving sales efficiency through workflow automation and digital tools.",
+        "ScenarioRecordID": 5717,
+        "KPI": "Reduce Selling Cost",
+        "Workload": "Dynamics 365 Sales",
+        "BenefitFormula": "Revenue Driving FTEs * Fully loaded FTE Cost (annual) * Reduction in Selling Cost (%)",
+        "Inputs": {
+          "RevenueDrivingFTEs": 15000,
+          "FullyLoadedFTECostAnnual": 90000,
+          "ReductionInSellingCostPercent": 0.05
+        },
+        "CalculatedBenefit": 67500000,
+        "BenefitCurrency": "EUR",
+        "Notes": "Benefit represents annual cost savings from reduced selling expenses."
+      }
+    ]
+  }
+}

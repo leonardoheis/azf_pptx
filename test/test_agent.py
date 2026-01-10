@@ -10,6 +10,7 @@ import azure.functions as func
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import function_app as fa
+from helpers.valuemap_transformer import is_valuemap_format, transform_valuemap_to_industry_research
 
 
 def make_req(payload: dict) -> func.HttpRequest:
@@ -21,8 +22,8 @@ def make_req(payload: dict) -> func.HttpRequest:
     )
 
 
-def test_agent_success(monkeypatch):
-    # Prepare mocks for container/blob
+def _mock_blob_and_container(monkeypatch):
+    """Helper to mock blob storage clients."""
     blob_client = Mock()
     blob_client.account_name = "acct"
     blob_client.upload_blob = Mock()
@@ -30,19 +31,19 @@ def test_agent_success(monkeypatch):
     container_mock = Mock()
     container_mock.get_blob_client.return_value = blob_client
 
-    # Prepare mock table client
-    table_mock = Mock()
-    table_mock.create_entity = Mock()
-
-    # Monkeypatch accessors in function_app
     monkeypatch.setattr(fa, "_get_container_client", lambda: container_mock)
-    # monkeypatch.setattr(fa, "_get_table_client", lambda: table_mock)
+    return blob_client, container_mock
+
+
+def test_agent_success(monkeypatch):
+    """Test successful processing with IndustryResearch format."""
+    blob_client, _ = _mock_blob_and_container(monkeypatch)
 
     # load payload files from test/payloads
     with (
-        open("test/payloads/CompanyResearchData1_v2.json") as f1,
-        open("test/payloads/CompanyResearchData2_v2.json") as f2,
-        open("test/payloads/CompanyResearchData3_v2.json") as f3,
+        open("test/payloads/CompanyReseachData1_v2.json") as f1,
+        open("test/payloads/CompanyReseachData2_v2.json") as f2,
+        open("test/payloads/CompanyReseachData3_v2.json") as f3,
         open("test/payloads/IndustryResearch.json") as fi,
     ):
         pd1 = json.load(f1)
@@ -62,18 +63,153 @@ def test_agent_success(monkeypatch):
     assert resp.status_code == 200
     body = json.loads(resp.get_body().decode())
     assert body["status"] == "success"
-    table_mock.create_entity.assert_called_once()
+    blob_client.upload_blob.assert_called_once()
+
+
+def test_agent_success_with_valuemap(monkeypatch):
+    """Test successful processing with ValueMap format (auto-transformed)."""
+    blob_client, _ = _mock_blob_and_container(monkeypatch)
+
+    # load combined L'Oreal payload that uses ValueMap format
+    with open("test/payloads/combined_loreal.json") as f:
+        payload = json.load(f)
+
+    req = make_req(payload)
+    resp = fa.agent_httptrigger(req)
+    assert resp.status_code == 200
+    body = json.loads(resp.get_body().decode())
+    assert body["status"] == "success"
     blob_client.upload_blob.assert_called_once()
 
 
 def test_missing_required_returns_400():
+    """Test that missing required fields returns 400."""
     req = make_req({})
     resp = fa.agent_httptrigger(req)
     assert resp.status_code == 400
 
 
+def test_missing_industry_and_valuemap_returns_400():
+    """Test that missing both IndustryResearch and ValueMap returns 400."""
+    payload = {
+        "CompanyResearchData1": {"Company Name": "Test"},
+        "CompanyResearchData2": {"Revenue": {"Amount": 1000}},
+        "CompanyResearchData3": {"Latest Relevant News": []},
+    }
+    req = make_req(payload)
+    resp = fa.agent_httptrigger(req)
+    assert resp.status_code == 400
+    body = json.loads(resp.get_body().decode())
+    assert "IndustryResearch or ValueMap" in body["error"]
+
+
 def test_invalid_json_returns_400():
-    # craft invalid body
+    """Test that invalid JSON returns 400."""
     req = func.HttpRequest(method="POST", body=b"not-json", url="/api/agent_httptrigger")
     resp = fa.agent_httptrigger(req)
     assert resp.status_code == 400
+
+
+# --- ValueMap Transformer Unit Tests ---
+
+
+def test_is_valuemap_format_with_benefit_table():
+    """Test detection of ValueMap format."""
+    valuemap = {"BenefitTable": [{"Challenge": "Test", "KPI": "Test KPI"}]}
+    assert is_valuemap_format(valuemap) is True
+
+
+def test_is_valuemap_format_without_benefit_table():
+    """Test detection of non-ValueMap format."""
+    industry = {"title": "Test", "headers": ["A"], "rows": []}
+    assert is_valuemap_format(industry) is False
+
+
+def test_is_valuemap_format_with_non_dict():
+    """Test detection returns False for non-dict."""
+    assert is_valuemap_format("not a dict") is False
+    assert is_valuemap_format(None) is False
+    assert is_valuemap_format([]) is False
+
+
+def test_transform_valuemap_basic():
+    """Test basic ValueMap transformation."""
+    valuemap = {
+        "BenefitTable": [
+            {
+                "Challenge": "Challenge 1",
+                "Description": "Desc 1",
+                "KPI": "KPI 1",
+                "Workload": "Workload 1",
+                "CalculatedBenefit": 1000,
+            },
+            {
+                "Challenge": "Challenge 2",
+                "Description": "Desc 2",
+                "KPI": "KPI 2",
+                "Workload": "Workload 2",
+                "CalculatedBenefit": 2000,
+            },
+        ]
+    }
+
+    result = transform_valuemap_to_industry_research(valuemap, "Test Company")
+
+    assert result["title"] == "Test Company Value Map Benefit Table"
+    assert "Challenge" in result["headers"]
+    assert "Description" in result["headers"]
+    assert "KPI" in result["headers"]
+    assert len(result["rows"]) == 2
+    assert result["rows"][0]["Challenge"] == "Challenge 1"
+    assert result["rows"][1]["CalculatedBenefit"] == 2000
+
+
+def test_transform_valuemap_excludes_inputs():
+    """Test that Inputs (complex nested object) is excluded from headers."""
+    valuemap = {
+        "BenefitTable": [
+            {
+                "Challenge": "Test",
+                "KPI": "Test KPI",
+                "Inputs": {"Nested": "Value", "Another": 123},
+                "CalculatedBenefit": 500,
+            }
+        ]
+    }
+
+    result = transform_valuemap_to_industry_research(valuemap)
+
+    assert "Inputs" not in result["headers"]
+    assert "Challenge" in result["headers"]
+    assert "KPI" in result["headers"]
+
+
+def test_transform_valuemap_empty_company_name():
+    """Test title generation without company name."""
+    valuemap = {"BenefitTable": [{"Challenge": "Test"}]}
+
+    result = transform_valuemap_to_industry_research(valuemap, "")
+
+    assert result["title"] == "Value Map Benefit Table"
+
+
+def test_transform_valuemap_empty_benefit_table_raises():
+    """Test that empty BenefitTable raises ValueError."""
+    valuemap = {"BenefitTable": []}
+
+    try:
+        transform_valuemap_to_industry_research(valuemap)
+        assert False, "Expected ValueError"
+    except ValueError as e:
+        assert "empty" in str(e).lower()
+
+
+def test_transform_valuemap_missing_benefit_table_raises():
+    """Test that missing BenefitTable raises ValueError."""
+    valuemap = {"SomeOtherKey": []}
+
+    try:
+        transform_valuemap_to_industry_research(valuemap)
+        assert False, "Expected ValueError"
+    except ValueError as e:
+        assert "BenefitTable" in str(e)

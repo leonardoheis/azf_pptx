@@ -17,6 +17,7 @@ from config import AZ_STORAGE_CONN_STRING  # may be None in local env
 from config import AZ_BLOB_CONTAINER_NAME, INPUT_TEMPLATE, get_next_output_filename
 from helpers.exceptions import AppError, ValidationError
 from helpers.utils import unwrap_first_data
+from helpers.valuemap_transformer import is_valuemap_format, transform_valuemap_to_industry_research
 from industry_research import fill_industry_slides
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
@@ -87,29 +88,48 @@ def _validate_request_data(req_body: dict) -> tuple[dict, dict, dict, dict, str 
     """
     Validate that all required fields are present and of correct type.
 
+    Supports two formats for industry data:
+    - IndustryResearch: Direct table format with title, headers, rows
+    - ValueMap: BenefitTable format that gets auto-transformed to IndustryResearch
+
     Returns:
         Tuple of (company_data1, company_data2, company_data3, industry_data, error_message)
         error_message is None if validation passes.
     """
-    required = ["CompanyResearchData1", "CompanyResearchData2", "CompanyResearchData3", "IndustryResearch"]
-    missing = [k for k in required if k not in req_body]
-    if missing:
-        raise ValidationError(f"Missing required files: {', '.join(missing)}")
+    # Check for required company research fields
+    company_required = ["CompanyResearchData1", "CompanyResearchData2", "CompanyResearchData3"]
+    missing_company = [k for k in company_required if k not in req_body]
+    if missing_company:
+        raise ValidationError(f"Missing required fields: {', '.join(missing_company)}")
+
+    # Check for industry data - accept either IndustryResearch or ValueMap
+    has_industry = "IndustryResearch" in req_body
+    has_valuemap = "ValueMap" in req_body
+
+    if not has_industry and not has_valuemap:
+        raise ValidationError("Missing required field: IndustryResearch or ValueMap")
 
     company_data1 = req_body["CompanyResearchData1"]
     company_data2 = req_body["CompanyResearchData2"]
     company_data3 = req_body["CompanyResearchData3"]
-    industry_data = req_body["IndustryResearch"]
 
+    # Get industry data from either IndustryResearch or ValueMap
+    if has_valuemap:
+        industry_data = req_body["ValueMap"]
+    else:
+        industry_data = req_body["IndustryResearch"]
+
+    # Validate all fields are dicts
     for name, obj in [
         ("CompanyResearchData1", company_data1),
         ("CompanyResearchData2", company_data2),
         ("CompanyResearchData3", company_data3),
-        ("IndustryResearch", industry_data),
+        ("IndustryResearch/ValueMap", industry_data),
     ]:
         if not isinstance(obj, dict):
             raise ValidationError(f"Field '{name}' must be a valid JSON object")
 
+    # Unwrap data wrappers
     try:
         company_data1 = unwrap_first_data(company_data1, "CompanyResearchData1")
         company_data2 = unwrap_first_data(company_data2, "CompanyResearchData2")
@@ -118,7 +138,40 @@ def _validate_request_data(req_body: dict) -> tuple[dict, dict, dict, dict, str 
     except ValueError as exc:
         raise ValidationError(str(exc))
 
+    # Transform ValueMap format to IndustryResearch format if needed
+    industry_data = _transform_industry_data_if_needed(industry_data, company_data1)
+
     return company_data1, company_data2, company_data3, industry_data, None
+
+
+def _transform_industry_data_if_needed(industry_data: dict, company_data1: dict) -> dict:
+    """
+    Transform industry data from ValueMap format to IndustryResearch format if needed.
+
+    Args:
+        industry_data: Industry data that may be in ValueMap or IndustryResearch format
+        company_data1: Company data used to extract company name for title
+
+    Returns:
+        Industry data in IndustryResearch format (title, headers, rows)
+    """
+    # Check if data is in ValueMap format (has BenefitTable)
+    if is_valuemap_format(industry_data):
+        # Extract company name for title generation
+        company_name = company_data1.get("Company Name", "")
+        return transform_valuemap_to_industry_research(industry_data, company_name)
+
+    # Already in IndustryResearch format - validate required keys
+    required_keys = ["title", "headers", "rows"]
+    missing_keys = [k for k in required_keys if k not in industry_data]
+    if missing_keys:
+        raise ValidationError(
+            f"IndustryResearch must have keys: {', '.join(required_keys)}. "
+            f"Missing: {', '.join(missing_keys)}. "
+            "Alternatively, provide ValueMap format with BenefitTable array."
+        )
+
+    return industry_data
 
 
 def _log_received_data_keys(company_data1: dict, company_data2: dict, company_data3: dict, industry_data: dict) -> None:
