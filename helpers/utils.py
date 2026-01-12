@@ -53,12 +53,12 @@ def _remove_shape_and_get_bbox(shape):
     return left, top, width, height
 
 
-def _add_section_header(tf, title: str):
+def _add_section_header(tf, title: str, size: int = 18):
     p = tf.add_paragraph()
     p.text = title
     p.alignment = PP_ALIGN.LEFT
     for run in p.runs:
-        _set_font_size(run, size_pt=18, bold=True)
+        _set_font_size(run, size_pt=size, bold=True)
 
 
 def _add_bullet(tf, text: str, level: int = 0, size: int = 14):

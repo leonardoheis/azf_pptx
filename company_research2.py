@@ -2,28 +2,22 @@ from pptx import Presentation
 from pptx.enum.text import MSO_AUTO_SIZE
 
 from helpers.exceptions import TemplateError
-from helpers.utils import (
-    _add_bullet_runs,
-    _choose_link,
-    _deep_find,
-    _find_shape_with_token,
-    _fmt_billions_usd,
-    _get_first_str,
-    _norm,
-    _parse_date,
-    _parse_number,
-    _parse_percent,
-)
+from helpers.utils import _add_bullet_runs, _add_section_header, _find_shape_with_token
+
+# Font sizes for hierarchical layout
+HEADER_FONT_SIZE = 12
+FIELD_FONT_SIZE = 10
 
 
-# --------------------------------------------------------------------
-# Función 2: {{CompanyResearch2}}  (tabla de métricas clave)
-# --------------------------------------------------------------------
 def fill_company_research2(prs: Presentation, payload: dict, company_name: str | None = None):
     """
-    Genera bullets estilo narrativa, tolerante a cambios de claves/estructura.
-    Detecta Revenue, Industry Avg Gross Margin, Company Gross Margin, Employee Count.
-    Si falta algún dato, lo omite o degrada el texto.
+    Fills CompanyResearch2 slide with hierarchical bullet points from the payload.
+
+    Outputs section headers with sub-bullets for each field:
+    Revenue:
+      • Amount: $X
+      • Fiscal Year: YYYY
+      • Source: link
     """
     token = "{{CompanyResearch2}}"
 
@@ -31,210 +25,121 @@ def fill_company_research2(prs: Presentation, payload: dict, company_name: str |
     if not shape:
         raise TemplateError(f"Token '{token}' not found in any slide")
 
-    # Inferencia de nombre si no llega por parámetro
-    if not company_name:
-        # prueba con claves típicas
-        for k in ("Company Name", "Name", "Company"):
-            if k in payload and isinstance(payload[k], str) and payload[k].strip():
-                company_name = payload[k].strip()
-                break
-        company_name = company_name or "The company"
-
     tf = shape.text_frame
     tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
     tf.clear()
 
-    # --- Revenue (busca por revenue/sales/total revenue) ---
-    rev_obj = _deep_find(payload, ["revenue", "sales", "total revenue", "latest revenue", "annual revenue"])
-    if isinstance(rev_obj, dict):
-        # cantidad
-        amount = None
-        for k in ("amount", "value", "revenue", "sales"):
-            if k in {_norm(x) for x in rev_obj.keys()}:
-                for orig_k, v in rev_obj.items():
-                    if _norm(orig_k) == k:
-                        amount = _parse_number(v)
-                        break
-        if amount is None:
-            # fallback: busca primer número razonable en el dict
-            for v in rev_obj.values():
-                n = _parse_number(v)
-                if n and n > 1e6:
-                    amount = n
-                    break
-        amount_txt = _fmt_billions_usd(amount) if amount else "an undisclosed amount"
-
-        # fecha FY
-        fy = ""
-        for key in ("fiscal year close date", "fiscal year", "as of", "date"):
-            fy = _get_first_str(rev_obj, [key])
-            if fy:
-                break
-        fy_txt = _parse_date(fy) if fy else "the latest fiscal year"
-
-        # links
-        link_main = _choose_link(
-            rev_obj.get("Source"),
-            rev_obj.get("URL"),
-            rev_obj,
-        )
-        link_sec = _choose_link(rev_obj.get("SEC Source"), rev_obj.get("SEC URL"))
-
-        # bullet principal
-        _add_bullet_runs(
-            tf,
-            [
-                {
-                    "text": f"{company_name} reported an annual revenue of {amount_txt} for the fiscal year ending {fy_txt} ",
-                    "link": None,
-                },
-                *(
-                    [{"text": "(", "link": None}, {"text": link_main, "link": link_main}, {"text": ").", "link": None}]
-                    if link_main
-                    else [{"text": ".", "link": None}]
-                ),
-            ],
-            level=0,
-            size=14,
-        )
-
-        # sub-bullet SEC opcional
-        if link_sec:
-            _add_bullet_runs(
-                tf,
-                [
-                    {"text": "Additional filing: ", "link": None, "bold": False},
-                    {"text": link_sec, "link": link_sec},
-                ],
-                level=1,
-                size=12,
-            )
+    # --- Revenue ---
+    revenue_data = payload.get("Revenue", {})
+    if revenue_data:
+        _add_section_with_fields(tf, "Revenue:", revenue_data)
 
     # --- Industry Average Gross Margin ---
-    ind_gm_obj = _deep_find(payload, ["industry average gross margin", "industry gross margin", "industry avg"])
-    if isinstance(ind_gm_obj, dict):
-        industry = ""
-        for key in ("industry", "sector"):
-            s = _get_first_str(ind_gm_obj, [key])
-            if s:
-                industry = s
-                break
-        gm_avg = None
-        for key in ("average gross margin", "gross margin", "avg", "average"):
-            s = _get_first_str(ind_gm_obj, [key])
-            if s:
-                gm_avg = _parse_percent(s)
-                break
-        gm_txt = f"{gm_avg:.2f}%" if gm_avg is not None else "an unspecified value"
-
-        link_ind = _choose_link(ind_gm_obj.get("Source"), ind_gm_obj.get("URL"), ind_gm_obj)
-
-        _add_bullet_runs(
-            tf,
-            [
-                {
-                    "text": f'The industry average gross margin for the "{industry or "industry"}" industry is approximately {gm_txt} ',
-                    "link": None,
-                },
-                *(
-                    [{"text": "(", "link": None}, {"text": link_ind, "link": link_ind}, {"text": ").", "link": None}]
-                    if link_ind
-                    else [{"text": ".", "link": None}]
-                ),
-            ],
-            level=0,
-            size=14,
-        )
+    industry_gm_data = payload.get("Industry Average Gross Margin", {})
+    if industry_gm_data:
+        _add_section_with_fields(tf, "Industry Average Gross Margin:", industry_gm_data)
 
     # --- Company Gross Margin ---
-    comp_gm_obj = _deep_find(payload, ["company gross margin", "gross margin"])
-    if isinstance(comp_gm_obj, dict):
-        gm = None
-        for key in ("gross margin", "margin"):
-            s = _get_first_str(comp_gm_obj, [key])
-            if s:
-                gm = _parse_percent(s)
-                break
-        gm_txt = f"{gm:.2f}%" if gm is not None else "an unspecified value"
+    company_gm_data = payload.get("Company Gross Margin", {})
+    if company_gm_data:
+        _add_section_with_fields(tf, "Company Gross Margin:", company_gm_data)
 
-        fy = ""
-        for key in ("fiscal year close date", "fiscal year", "as of", "date"):
-            fy = _get_first_str(comp_gm_obj, [key])
-            if fy:
-                break
-        fy_txt = _parse_date(fy) if fy else "the latest fiscal year"
+    # --- Employee Count ---
+    employee_data = payload.get("Employee Count", {})
+    if employee_data:
+        _add_section_with_fields(tf, "Employee Count:", employee_data)
 
-        link_cmp = _choose_link(comp_gm_obj.get("Source"), comp_gm_obj.get("URL"), comp_gm_obj)
 
-        # si tenemos industry avg, comparamos
-        tail = ""
-        try:
-            ind_val = None
-            for key in ("average gross margin", "gross margin", "avg", "average"):
-                s = _get_first_str(ind_gm_obj or {}, [key])
-                if s:
-                    ind_val = _parse_percent(s)
-                    break
-            if ind_val is not None and gm is not None and abs(ind_val - gm) < 1e-6:
-                tail = ", matching the industry average"
-        except Exception:
-            pass
+def _add_section_with_fields(tf, header: str, data: dict) -> None:
+    """
+    Add a section header followed by sub-bullets for each field.
 
-        _add_bullet_runs(
-            tf,
-            [
-                {
-                    "text": f"The company's gross margin for the fiscal year ending {fy_txt} was {gm_txt}{tail} ",
-                    "link": None,
-                },
-                *(
-                    [{"text": "(", "link": None}, {"text": link_cmp, "link": link_cmp}, {"text": ").", "link": None}]
-                    if link_cmp
-                    else [{"text": ".", "link": None}]
-                ),
-            ],
-            level=0,
-            size=14,
-        )
+    Args:
+        tf: Text frame to add content to
+        header: Section header text (e.g., "Revenue:")
+        data: Dictionary of field key-value pairs
+    """
+    # Add section header (bold, level 0)
+    _add_section_header(tf, header, size=HEADER_FONT_SIZE)
 
-    # --- Employee Count / Headcount ---
-    emp_obj = _deep_find(payload, ["employee count", "headcount", "employees"])
-    if isinstance(emp_obj, dict):
-        headcount = None
-        # busca número
-        for k in emp_obj.keys():
-            nk = _norm(k)
-            if any(s in nk for s in ["headcount", "employees", "employee count", "count", "total"]):
-                headcount = emp_obj[k]
-                break
-        # formateo
-        if isinstance(headcount, (int, float)):
-            hc_txt = f"{int(headcount):,}"
-        else:
-            # intentar parsear si viene como string
-            n = _parse_number(headcount)
-            hc_txt = f"{int(n):,}" if n else (str(headcount) if headcount is not None else "an unspecified number")
-        hc_txt = hc_txt.replace(",", ",")  # miles estándar
+    # Add sub-bullets for each field
+    for key, value in data.items():
+        _add_field_bullet(tf, key, value)
 
-        asof = ""
-        for key in ("as of", "date", "fiscal year close date", "fiscal year"):
-            asof = _get_first_str(emp_obj, [key])
-            if asof:
-                break
-        asof_txt = _parse_date(asof) if asof else "the stated date"
 
-        link_emp = _choose_link(emp_obj.get("Source"), emp_obj.get("URL"), emp_obj)
+def _add_field_bullet(tf, key: str, value) -> None:
+    """
+    Add a sub-bullet for a single field.
 
-        _add_bullet_runs(
-            tf,
-            [
-                {"text": f"The company had {hc_txt} employees as of {asof_txt} ", "link": None},
-                *(
-                    [{"text": "(", "link": None}, {"text": link_emp, "link": link_emp}, {"text": ").", "link": None}]
-                    if link_emp
-                    else [{"text": ".", "link": None}]
-                ),
-            ],
-            level=0,
-            size=14,
-        )
+    Args:
+        tf: Text frame to add content to
+        key: Field name
+        value: Field value (can be string, number, etc.)
+    """
+    # Format the value appropriately
+    formatted_value = _format_field_value(key, value)
+
+    # Check if value is a URL (for Source fields)
+    is_url = isinstance(value, str) and value.startswith(("http://", "https://"))
+
+    if is_url:
+        # Make source links clickable
+        runs = [
+            {"text": f"{key}: ", "link": None},
+            {"text": formatted_value, "link": value},
+        ]
+        _add_bullet_runs(tf, runs, level=1, size=FIELD_FONT_SIZE)
+    else:
+        # Regular field
+        runs = [{"text": f"{key}: {formatted_value}", "link": None}]
+        _add_bullet_runs(tf, runs, level=1, size=FIELD_FONT_SIZE)
+
+
+def _format_field_value(key: str, value) -> str:
+    """
+    Format a field value for display.
+
+    Args:
+        key: Field name (used to determine formatting)
+        value: Raw value
+
+    Returns:
+        Formatted string representation
+    """
+    if value is None:
+        return "Not available"
+
+    # Handle numeric amounts (for Amount/Headcount fields)
+    if key.lower() == "amount" and isinstance(value, (int, float)):
+        return _format_currency(value)
+
+    if key.lower() == "headcount" and isinstance(value, (int, float)):
+        return f"{int(value):,}"
+
+    # Handle percentage values
+    if isinstance(value, (int, float)) and "margin" in key.lower():
+        return f"{value}%"
+
+    # Default: convert to string
+    return str(value)
+
+
+def _format_currency(amount) -> str:
+    """
+    Format currency amount with dollar sign and commas.
+
+    Args:
+        amount: Numeric amount
+
+    Returns:
+        Formatted string like "$421,300,000"
+    """
+    if amount is None:
+        return "Not disclosed"
+
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return str(amount)
+
+    return f"${int(amount):,}"

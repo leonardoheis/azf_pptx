@@ -5,21 +5,27 @@ from pptx.enum.text import MSO_AUTO_SIZE
 
 from helpers.exceptions import TemplateError
 from helpers.utils import (
-    _add_bullet,
+    _add_bullet_runs,
     _add_section_header,
     _find_shape_with_token,
     _load_json,
     _replace_company_name_everywhere,
 )
 
+# Font sizes matching company_research2.py
+HEADER_FONT_SIZE = 12
+FIELD_FONT_SIZE = 10
+
 
 def fill_company_research1(prs: Presentation, payload: dict):
     """
-    Fills the CompanyResearch1 section with bullet points from objects/lists.
+    Fills the CompanyResearch1 section with hierarchical bullet points.
 
-    Args:
-        prs: PowerPoint Presentation object
-        payload: Dictionary containing company research data
+    Outputs section headers with sub-bullets for each field:
+    Profile:
+      • Description: ...
+      • Industry: ...
+      • Core Mission: ...
     """
     token = "{{CompanyResearch1}}"
 
@@ -35,44 +41,122 @@ def fill_company_research1(prs: Presentation, payload: dict):
         logging.warning("CompanyResearch1 payload is empty; slide will be left blank.")
         return
 
-    # Ignore "Company Name" because the name goes through {{CompanyName}}
+    # Process each top-level key (except Company Name)
     for key, val in payload.items():
         if key == "Company Name":
             continue
 
-        # Section header if the value is complex
-        if isinstance(val, (dict, list)):
-            _add_section_header(tf, f"{key}:")
-            if isinstance(val, dict):
-                # dict: sub-keys as bullets
-                for k2, v2 in val.items():
-                    if isinstance(v2, list):
-                        _add_bullet(tf, f"{k2}:", level=0, size=14)
-                        # list of dicts or primitives
-                        for item in v2:
-                            if isinstance(item, dict):
-                                line = "; ".join(f"{kk}: {vv}" for kk, vv in item.items())
-                                _add_bullet(tf, line, level=1, size=12)
-                            else:
-                                _add_bullet(tf, str(item), level=1, size=12)
-                    elif isinstance(v2, dict):
-                        # one more level
-                        _add_bullet(tf, f"{k2}:", level=0, size=14)
-                        for kk, vv in v2.items():
-                            _add_bullet(tf, f"{kk}: {vv}", level=1, size=12)
-                    else:
-                        _add_bullet(tf, f"{k2}: {v2}", level=0, size=14)
-            else:
-                # list at root level
-                for item in val:
-                    if isinstance(item, dict):
-                        line = "; ".join(f"{kk}: {vv}" for kk, vv in item.items())
-                        _add_bullet(tf, line, level=1, size=12)
-                    else:
-                        _add_bullet(tf, str(item), level=1, size=12)
+        if isinstance(val, dict):
+            # Section with nested fields
+            _add_section_with_nested_fields(tf, f"{key}:", val)
+        elif isinstance(val, list):
+            # Section with list of items
+            _add_section_with_list(tf, f"{key}:", val)
         else:
-            # simple value
-            _add_bullet(tf, f"{key}: {val}", level=0, size=14)
+            # Simple key-value at top level
+            _add_field_bullet(tf, key, val, level=0)
+
+
+def _add_section_with_nested_fields(tf, header: str, data: dict, level: int = 0) -> None:
+    """
+    Add a section header followed by sub-bullets for each field.
+
+    Args:
+        tf: Text frame to add content to
+        header: Section header text
+        data: Dictionary of field key-value pairs
+        level: Indentation level for the header
+    """
+    if level == 0:
+        _add_section_header(tf, header, size=HEADER_FONT_SIZE)
+    else:
+        _add_simple_bullet(tf, header, level=level, size=HEADER_FONT_SIZE)
+
+    # Add sub-bullets for each field
+    for key, value in data.items():
+        if isinstance(value, dict):
+            # Nested dict - recurse with increased level
+            _add_section_with_nested_fields(tf, f"{key}:", value, level=level + 1)
+        elif isinstance(value, list):
+            # List of items
+            _add_list_field(tf, key, value, level=level + 1)
+        else:
+            # Simple field
+            _add_field_bullet(tf, key, value, level=level + 1)
+
+
+def _add_section_with_list(tf, header: str, items: list) -> None:
+    """
+    Add a section header followed by list items.
+
+    Args:
+        tf: Text frame to add content to
+        header: Section header text
+        items: List of items (can be dicts or primitives)
+    """
+    _add_section_header(tf, header, size=HEADER_FONT_SIZE)
+
+    for item in items:
+        if isinstance(item, dict):
+            # Each dict item gets its fields as sub-bullets
+            for key, value in item.items():
+                _add_field_bullet(tf, key, value, level=1)
+        else:
+            # Primitive item
+            _add_simple_bullet(tf, str(item), level=1, size=FIELD_FONT_SIZE)
+
+
+def _add_list_field(tf, key: str, items: list, level: int) -> None:
+    """
+    Add a field that contains a list of items.
+
+    Args:
+        tf: Text frame to add content to
+        key: Field name
+        items: List of items
+        level: Indentation level
+    """
+    _add_simple_bullet(tf, f"{key}:", level=level, size=HEADER_FONT_SIZE)
+
+    for item in items:
+        if isinstance(item, dict):
+            # Each dict item gets its fields as sub-bullets
+            for k, v in item.items():
+                _add_field_bullet(tf, k, v, level=level + 1)
+        else:
+            _add_simple_bullet(tf, str(item), level=level + 1, size=FIELD_FONT_SIZE)
+
+
+def _add_field_bullet(tf, key: str, value, level: int) -> None:
+    """
+    Add a sub-bullet for a single field with optional hyperlink for URLs.
+
+    Args:
+        tf: Text frame to add content to
+        key: Field name
+        value: Field value
+        level: Indentation level
+    """
+    value_str = str(value) if value is not None else ""
+
+    # Check if value is a URL
+    is_url = isinstance(value, str) and value.startswith(("http://", "https://"))
+
+    if is_url:
+        runs = [
+            {"text": f"{key}: ", "link": None},
+            {"text": value_str, "link": value},
+        ]
+        _add_bullet_runs(tf, runs, level=level, size=FIELD_FONT_SIZE)
+    else:
+        runs = [{"text": f"{key}: {value_str}", "link": None}]
+        _add_bullet_runs(tf, runs, level=level, size=FIELD_FONT_SIZE)
+
+
+def _add_simple_bullet(tf, text: str, level: int, size: int) -> None:
+    """Add a simple bullet point without key-value formatting."""
+    runs = [{"text": text, "link": None}]
+    _add_bullet_runs(tf, runs, level=level, size=size)
 
 
 # --------------------------------------------------------------------
