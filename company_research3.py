@@ -15,9 +15,14 @@ from helpers.utils import (
     _parse_date,
 )
 
+# Font sizes for hierarchical layout
+TITLE_FONT_SIZE = 12  # Section headers (e.g., "Latest Relevant News:")
+BULLET_FONT_SIZE = 11  # First level bullets (main content)
+SUB_BULLET_FONT_SIZE = 10  # Second level bullets (details like "Date published:", "Source:")
+
 
 # --------------------------------------------------------------------
-# Función 3 (genérica): {{CompanyResearch3}} -> bullets jerárquicos + links
+# Function 3 (generic): {{CompanyResearch3}} -> hierarchical bullets + links
 # --------------------------------------------------------------------
 def fill_company_research3(prs: Presentation, payload: dict):
     token = "{{CompanyResearch3}}"
@@ -34,7 +39,7 @@ def fill_company_research3(prs: Presentation, payload: dict):
     base_left, base_top, base_width, base_height = shape.left, shape.top, shape.width, shape.height
 
     # Gather sections in the original order
-    sections = list(payload.items())
+    sections = list[tuple](payload.items())
 
     # Ensure the first slide textbox is ready
     tf_first = shape.text_frame
@@ -68,27 +73,27 @@ def fill_company_research3(prs: Presentation, payload: dict):
             logging.info("CompanyResearch3 added continuation slide #%s", chunk_index + 1)
         return target_slide, tf_local
 
-    # -------- helpers internos sin configuraciones externas --------
+    # -------- internal helpers without external configuration --------
     def _section_items(section_value):
         """
-        Extrae la lista de ítems de una sección cualquiera de forma genérica:
-        - dict con alguna lista (clave que contenga 'list/items/entries/highlights/data/points') -> esa lista + meta
-        - lista directa -> items=list, meta=None
-        - dict sin listas -> [dict] + dict (se trata como un solo ítem)
-        - primitivo -> [{'Value': primitivo}] + None
+        Extracts the list of items from any section generically:
+        - dict with a list (key containing 'list/items/entries/highlights/data/points') -> that list + meta
+        - direct list -> items=list, meta=None
+        - dict without lists -> [dict] + dict (treated as a single item)
+        - primitive -> [{'Value': primitive}] + None
         """
         if isinstance(section_value, dict):
-            # buscar una lista "natural"
+            # look for a "natural" list
             for k, v in section_value.items():
                 if isinstance(v, list) and any(
                     w in _norm(k) for w in ["list", "items", "entries", "highlights", "data", "points"]
                 ):
                     return v, section_value
-            # si no hubo, tomar la primera lista que aparezca
+            # if none found, take the first list that appears
             for v in section_value.values():
                 if isinstance(v, list):
                     return v, section_value
-            # dict plano
+            # flat dict
             return [section_value], section_value
         elif isinstance(section_value, list):
             return section_value, None
@@ -97,15 +102,15 @@ def fill_company_research3(prs: Presentation, payload: dict):
 
     def _score_main_kv(k, v):
         """
-        Puntúa un par clave/valor para elegir la línea principal de un ítem:
-        - Prefiere strings más largas
-        - Le da un pequeño bonus a claves "título-like" (title/name/headline/summary)
-        - Penaliza URLs puras
+        Scores a key/value pair to choose the main line of an item:
+        - Prefers longer strings
+        - Gives a small bonus to "title-like" keys (title/name/headline/summary)
+        - Penalizes pure URLs
         """
         if isinstance(v, str):
             if _is_url(v):
-                return 0.5  # URLs no son buen título
-            base = min(len(v.strip()), 200) / 200.0  # normaliza por longitud
+                return 0.5  # URLs are not good titles
+            base = min(len(v.strip()), 200) / 200.0  # normalize by length
         elif isinstance(v, (int, float)):
             base = 0.4
         elif isinstance(v, dict):
@@ -122,9 +127,9 @@ def fill_company_research3(prs: Presentation, payload: dict):
 
     def _choose_main_text(item_dict):
         """
-        Elige texto principal del ítem sin depender de nombres fijos:
-        - Máxima puntuación por _score_main_kv
-        - Si no hay strings útiles, compacta como "k: v; ..."
+        Chooses the main text of an item without depending on fixed names:
+        - Maximum score via _score_main_kv
+        - If no useful strings, compact as "k: v; ..."
         """
         best_k, best_v, best_score = None, None, -1.0
         for k, v in item_dict.items():
@@ -134,24 +139,24 @@ def fill_company_research3(prs: Presentation, payload: dict):
 
         if isinstance(best_v, str) and best_v.strip():
             return best_k, best_v.strip()
-        # si el "mejor" no es string, intentar otra string decente
+        # if the "best" is not a string, try another decent string
         for k, v in item_dict.items():
             if isinstance(v, str) and v.strip() and not _is_url(v):
                 return k, v.strip()
-        # último recurso: compactar el dict
+        # last resort: compact the dict
         try:
             return best_k, "; ".join(f"{k}: {v}" for k, v in item_dict.items() if v not in (None, ""))
         except Exception:
-            # fallback duro
+            # hard fallback
             return best_k, str(next(iter(item_dict.values()), ""))
 
     def _key_priority(k, v):
         """
-        Orden genérico de subcampos:
+        Generic ordering of subfields:
         0: summary/description
-        1: fechas (date/as of/fiscal)
-        2: valores "normales" (texto/números)
-        3: URLs y fuentes
+        1: dates (date/as of/fiscal)
+        2: "normal" values (text/numbers)
+        3: URLs and sources
         """
         nk = _norm(k)
         if any(w in nk for w in ["summary", "description", "details", "overview"]):
@@ -166,14 +171,14 @@ def fill_company_research3(prs: Presentation, payload: dict):
 
     def _order_subkeys(item_dict, main_key_used):
         keys = [k for k in item_dict.keys() if k != main_key_used]
-        # ordenar por prioridad (+ alfabético estable)
+        # sort by priority (+ stable alphabetical)
         return sorted(keys, key=lambda k: (_key_priority(k, item_dict[k]), _norm(k)))
 
     def _section_suffix_from_meta(meta_dict):
-        """Si en meta hay FY/As Of/Date, agregar sufijo legible al header."""
+        """If meta contains FY/As Of/Date, add a readable suffix to the header."""
         if not isinstance(meta_dict, dict):
             return ""
-        # elegir la primera fecha razonable
+        # choose the first reasonable date
         for k, v in meta_dict.items():
             nk = _norm(k)
             if isinstance(v, str) and any(w in nk for w in ["fiscal year", "as of", "date"]):
@@ -184,74 +189,81 @@ def fill_company_research3(prs: Presentation, payload: dict):
         return ""
 
     def _emit_value_as_bullets(label, value, level=1):
-        """Render genérico de un valor como bullets/sub-bullets."""
+        """Generic render of a value as bullets/sub-bullets."""
         if value in (None, ""):
             return
 
-        # URL pura
+        # pure URL
         if isinstance(value, str) and _is_url(value):
-            _add_bullet_runs(tf, [{"text": f"{label}: "}, {"text": value, "link": value}], level=level, size=12)
+            _add_bullet_runs(
+                tf, [{"text": f"{label}: "}, {"text": value, "link": value}], level=level, size=SUB_BULLET_FONT_SIZE
+            )
             return
 
-        # lista
+        # list
         if isinstance(value, list):
             if all(isinstance(x, (str, int, float)) for x in value):
                 for x in value:
-                    _add_bullet(tf, f"{label}: {x}", level=level, size=12)
+                    _add_bullet(tf, f"{label}: {x}", level=level, size=SUB_BULLET_FONT_SIZE)
             else:
                 for x in value:
                     if isinstance(x, dict):
                         mk, mv = _choose_main_text(x)
-                        _add_bullet(tf, f"{label}: {mv}", level=level, size=12)
-                        # URLs internas
+                        _add_bullet(tf, f"{label}: {mv}", level=level, size=SUB_BULLET_FONT_SIZE)
+                        # internal URLs
                         for u in _extract_urls(x):
-                            _add_bullet_runs(tf, [{"text": "link: "}, {"text": u, "link": u}], level=level + 1, size=11)
+                            _add_bullet_runs(
+                                tf,
+                                [{"text": "link: "}, {"text": u, "link": u}],
+                                level=level + 1,
+                                size=SUB_BULLET_FONT_SIZE,
+                            )
                     else:
-                        _add_bullet(tf, f"{label}: {x}", level=level, size=12)
+                        _add_bullet(tf, f"{label}: {x}", level=level, size=SUB_BULLET_FONT_SIZE)
             return
 
         # dict
         if isinstance(value, dict):
             mk, mv = _choose_main_text(value)
-            # línea principal del sub-dict
-            _add_bullet(tf, f"{label}: {mv}", level=level, size=12)
-            # resto de campos del sub-dict
+            # main line of the sub-dict
+            _add_bullet(tf, f"{label}: {mv}", level=level, size=SUB_BULLET_FONT_SIZE)
+            # remaining fields of the sub-dict
             for sk in _order_subkeys(value, mk):
                 sv = value.get(sk)
                 _emit_value_as_bullets(sk, sv, level=level + 1)
             return
 
-        # string/numérico
+        # string/numeric
         nk = _norm(label)
         vtxt = (
             _parse_date(value)
             if isinstance(value, str) and any(s in nk for s in ["date", "as of", "fiscal year", "fy"])
             else str(value)
         )
-        _add_bullet(tf, f"{label}: {vtxt}", level=level, size=12)
+        _add_bullet(tf, f"{label}: {vtxt}", level=level, size=SUB_BULLET_FONT_SIZE)
 
-    # -------- recorrido genérico de secciones (en orden de aparición) --------
+    # -------- generic section traversal (in order of appearance) --------
     # Render two section headers per slide (generic, no hardcoded titles)
     for idx in range(0, len(sections), 2):
         _, tf = _get_target_tf(idx // 2)
         for section_name, section_value in sections[idx : idx + 2]:
             items, meta = _section_items(section_value)
             suffix = _section_suffix_from_meta(meta)
-            _add_section_header(tf, f"{section_name}{suffix}:")
+            _add_section_header(tf, f"{section_name}{suffix}:", size=TITLE_FONT_SIZE)
 
             for it in items:
                 if isinstance(it, dict):
                     mk, mv = _choose_main_text(it)
-                    _add_bullet(tf, mv, level=0, size=14)
+                    _add_bullet(tf, mv, level=0, size=BULLET_FONT_SIZE)
 
-                    # subcampos del ítem
+                    # subfields of the item
                     for sk in _order_subkeys(it, mk):
                         sv = it.get(sk)
                         _emit_value_as_bullets(sk, sv, level=1)
                 elif isinstance(it, list):
-                    # lista de primitivas en un ítem
+                    # list of primitives in an item
                     for x in it:
-                        _add_bullet(tf, str(x), level=0, size=14)
+                        _add_bullet(tf, str(x), level=0, size=BULLET_FONT_SIZE)
                 else:
-                    # primitivo
-                    _add_bullet(tf, str(it), level=0, size=14)
+                    # primitive
+                    _add_bullet(tf, str(it), level=0, size=BULLET_FONT_SIZE)

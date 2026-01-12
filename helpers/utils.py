@@ -53,8 +53,20 @@ def _remove_shape_and_get_bbox(shape):
     return left, top, width, height
 
 
+def _get_or_add_paragraph(tf):
+    """
+    Get the first paragraph if it's empty, otherwise add a new one.
+
+    This fixes the issue where tf.clear() leaves an empty paragraph,
+    causing extra space at the top of the text frame.
+    """
+    if len(tf.paragraphs) == 1 and tf.paragraphs[0].text == "":
+        return tf.paragraphs[0]
+    return tf.add_paragraph()
+
+
 def _add_section_header(tf, title: str, size: int = 18):
-    p = tf.add_paragraph()
+    p = _get_or_add_paragraph(tf)
     p.text = title
     p.alignment = PP_ALIGN.LEFT
     for run in p.runs:
@@ -62,7 +74,7 @@ def _add_section_header(tf, title: str, size: int = 18):
 
 
 def _add_bullet(tf, text: str, level: int = 0, size: int = 14):
-    p = tf.add_paragraph()
+    p = _get_or_add_paragraph(tf)
     p.text = f"• {text}" if not text.startswith("•") else text
     p.alignment = PP_ALIGN.LEFT
     p.level = level
@@ -227,7 +239,7 @@ def _get_first_str(d: dict, key_synonyms: list[str]) -> str:
 
 
 def _add_bullet_runs(tf, runs, level=0, size=14):
-    p = tf.add_paragraph()
+    p = _get_or_add_paragraph(tf)
     p.alignment = PP_ALIGN.LEFT
     p.level = level
     for piece in runs:
