@@ -167,11 +167,12 @@ def test_transform_valuemap_basic():
     assert "KPI" in result["headers"]
     assert len(result["rows"]) == 2
     assert result["rows"][0]["Challenge"] == "Challenge 1"
-    assert result["rows"][1]["CalculatedBenefit"] == 2000
+    # Values are flattened to strings
+    assert result["rows"][1]["CalculatedBenefit"] == "2000"
 
 
-def test_transform_valuemap_excludes_inputs():
-    """Test that Inputs (complex nested object) is excluded from headers."""
+def test_transform_valuemap_includes_inputs():
+    """Test that Inputs column is included and flattened."""
     valuemap = {
         "BenefitTable": [
             {
@@ -185,9 +186,12 @@ def test_transform_valuemap_excludes_inputs():
 
     result = transform_valuemap_to_industry_research(valuemap)
 
-    assert "Inputs" not in result["headers"]
+    # Inputs is now included in headers
+    assert "Inputs" in result["headers"]
     assert "Challenge" in result["headers"]
     assert "KPI" in result["headers"]
+    # Inputs value is flattened to string
+    assert result["rows"][0]["Inputs"] == "Nested: Value; Another: 123"
 
 
 def test_transform_valuemap_empty_company_name():

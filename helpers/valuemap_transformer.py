@@ -8,8 +8,8 @@ expected by the PowerPoint generation logic.
 import logging
 from typing import Any
 
-# Keys to exclude from the flattened row output (complex nested objects)
-EXCLUDED_KEYS = {"Inputs"}
+# Keys to exclude from the flattened row output (none - include all keys)
+EXCLUDED_KEYS: set[str] = set()
 
 # Default headers order (preferred column ordering)
 PREFERRED_HEADER_ORDER = [
@@ -19,7 +19,9 @@ PREFERRED_HEADER_ORDER = [
     "KPI",
     "Workload",
     "BenefitFormula",
+    "Inputs",
     "CalculatedBenefit",
+    "CalculatedBenefitUSD",
     "BenefitCurrency",
     "Notes",
 ]
@@ -179,24 +181,51 @@ def _extract_headers(first_row: dict) -> list[str]:
 
 def _is_complex_value(value: Any) -> bool:
     """
-    Check if a value is too complex to include in table output.
+    Check if a value is a complex nested structure.
+
+    Note: Complex values like dicts are now supported via flattening.
 
     Args:
         value: Value to check
 
     Returns:
-        True if value is a dict or list of dicts (complex nested structure)
+        True only for list of dicts (too complex to flatten meaningfully)
     """
-    if isinstance(value, dict):
-        return True
+    # Dicts can be flattened, so they're not excluded anymore
     if isinstance(value, list) and value and isinstance(value[0], dict):
         return True
     return False
 
 
+def _flatten_value(value: Any) -> str:
+    """
+    Convert a value to a string suitable for table display.
+
+    Handles nested dicts by flattening to "key: value; key: value" format.
+
+    Args:
+        value: Value to convert
+
+    Returns:
+        String representation of the value
+    """
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        # Flatten dict to readable string
+        parts = [f"{k}: {v}" for k, v in value.items()]
+        return "; ".join(parts)
+    if isinstance(value, list):
+        # Simple lists to comma-separated string
+        return ", ".join(str(v) for v in value)
+    return str(value)
+
+
 def _transform_rows(benefit_table: list[dict], headers: list[str]) -> list[dict]:
     """
     Transform BenefitTable rows to include only the specified headers.
+
+    Flattens complex values (like nested dicts) for display.
 
     Args:
         benefit_table: List of row dictionaries
@@ -214,10 +243,8 @@ def _transform_rows(benefit_table: list[dict], headers: list[str]) -> list[dict]
         transformed_row = {}
         for header in headers:
             value = row.get(header, "")
-            # Convert None to empty string for consistency
-            if value is None:
-                value = ""
-            transformed_row[header] = value
+            # Flatten complex values to string representation
+            transformed_row[header] = _flatten_value(value)
 
         rows.append(transformed_row)
 
