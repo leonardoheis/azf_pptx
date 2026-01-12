@@ -59,18 +59,25 @@ def fill_company_research3(prs: Presentation, payload: dict):
             new_slide.shapes._spTree.remove(shp._element)
         return new_slide
 
+    # Track last slide for correct ordering of continuation slides
+    last_slide = slide
+
     # Helper to get or create target slide/shape for each chunk
     def _get_target_tf(chunk_index: int):
+        nonlocal last_slide
         if chunk_index == 0:
             target_slide = slide
             tf_local = tf_first
         else:
-            target_slide = _add_slide_after(prs, slide, slide.slide_layout)
+            # Insert after last_slide to maintain correct order
+            target_slide = _add_slide_after(prs, last_slide, slide.slide_layout)
             target_shape = target_slide.shapes.add_textbox(base_left, base_top, base_width, base_height)
             tf_local = target_shape.text_frame
             tf_local.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-            tf_local.clear()
+            # Note: Don't call clear() - newly created textbox already has one empty paragraph
+            # that _get_or_add_paragraph() will reuse
             logging.info("CompanyResearch3 added continuation slide #%s", chunk_index + 1)
+            last_slide = target_slide  # Update reference for next insertion
         return target_slide, tf_local
 
     # -------- internal helpers without external configuration --------
@@ -103,26 +110,31 @@ def fill_company_research3(prs: Presentation, payload: dict):
     def _score_main_kv(k, v):
         """
         Scores a key/value pair to choose the main line of an item:
-        - Prefers longer strings
-        - Gives a small bonus to "title-like" keys (title/name/headline/summary)
+        - Prefers longer strings (capped contribution)
+        - Strongly prioritizes headline/title fields over summary/description
         - Penalizes pure URLs
         """
         if isinstance(v, str):
             if _is_url(v):
-                return 0.5  # URLs are not good titles
-            base = min(len(v.strip()), 200) / 200.0  # normalize by length
+                return 0.1  # URLs are not good titles
+            # Cap length contribution so bonuses dominate
+            base = min(len(v.strip()), 200) / 200.0 * 0.3
         elif isinstance(v, (int, float)):
-            base = 0.4
+            base = 0.1
         elif isinstance(v, dict):
-            base = 0.3
+            base = 0.05
         elif isinstance(v, list):
-            base = 0.35
+            base = 0.08
         else:
-            base = 0.2
+            base = 0.05
 
         nk = _norm(k)
-        if any(w in nk for w in ["title", "name", "headline", "subject", "summary", "objective"]):
-            base += 0.3
+        # Strongly prioritize headline/title/challenge fields
+        if any(w in nk for w in ["headline", "title", "name", "subject", "challenge"]):
+            base += 1.0
+        # Summary/description gets much lower bonus
+        elif any(w in nk for w in ["summary", "description", "objective"]):
+            base += 0.2
         return base
 
     def _choose_main_text(item_dict):
@@ -188,10 +200,18 @@ def fill_company_research3(prs: Presentation, payload: dict):
                 return f" ({nice})" if nice else ""
         return ""
 
+    def _is_content_field(label):
+        """Check if field should display content only (no label prefix)."""
+        nk = _norm(label)
+        return any(w in nk for w in ["summary", "description", "details", "overview"])
+
     def _emit_value_as_bullets(label, value, level=1):
         """Generic render of a value as bullets/sub-bullets."""
         if value in (None, ""):
             return
+
+        # Check if this is a content-only field (no label prefix)
+        content_only = _is_content_field(label)
 
         # pure URL
         if isinstance(value, str) and _is_url(value):
@@ -204,12 +224,14 @@ def fill_company_research3(prs: Presentation, payload: dict):
         if isinstance(value, list):
             if all(isinstance(x, (str, int, float)) for x in value):
                 for x in value:
-                    _add_bullet(tf, f"{label}: {x}", level=level, size=SUB_BULLET_FONT_SIZE)
+                    text = str(x) if content_only else f"{label}: {x}"
+                    _add_bullet(tf, text, level=level, size=SUB_BULLET_FONT_SIZE)
             else:
                 for x in value:
                     if isinstance(x, dict):
                         mk, mv = _choose_main_text(x)
-                        _add_bullet(tf, f"{label}: {mv}", level=level, size=SUB_BULLET_FONT_SIZE)
+                        text = mv if content_only else f"{label}: {mv}"
+                        _add_bullet(tf, text, level=level, size=SUB_BULLET_FONT_SIZE)
                         # internal URLs
                         for u in _extract_urls(x):
                             _add_bullet_runs(
@@ -219,14 +241,16 @@ def fill_company_research3(prs: Presentation, payload: dict):
                                 size=SUB_BULLET_FONT_SIZE,
                             )
                     else:
-                        _add_bullet(tf, f"{label}: {x}", level=level, size=SUB_BULLET_FONT_SIZE)
+                        text = str(x) if content_only else f"{label}: {x}"
+                        _add_bullet(tf, text, level=level, size=SUB_BULLET_FONT_SIZE)
             return
 
         # dict
         if isinstance(value, dict):
             mk, mv = _choose_main_text(value)
             # main line of the sub-dict
-            _add_bullet(tf, f"{label}: {mv}", level=level, size=SUB_BULLET_FONT_SIZE)
+            text = mv if content_only else f"{label}: {mv}"
+            _add_bullet(tf, text, level=level, size=SUB_BULLET_FONT_SIZE)
             # remaining fields of the sub-dict
             for sk in _order_subkeys(value, mk):
                 sv = value.get(sk)
@@ -240,7 +264,9 @@ def fill_company_research3(prs: Presentation, payload: dict):
             if isinstance(value, str) and any(s in nk for s in ["date", "as of", "fiscal year", "fy"])
             else str(value)
         )
-        _add_bullet(tf, f"{label}: {vtxt}", level=level, size=SUB_BULLET_FONT_SIZE)
+        # Content fields (summary/description) show just the value
+        text = vtxt if content_only else f"{label}: {vtxt}"
+        _add_bullet(tf, text, level=level, size=SUB_BULLET_FONT_SIZE)
 
     # -------- generic section traversal (in order of appearance) --------
     # Render two section headers per slide (generic, no hardcoded titles)
