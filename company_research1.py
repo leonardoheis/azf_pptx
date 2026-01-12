@@ -13,8 +13,8 @@ from helpers.utils import (
 )
 
 # Font sizes matching company_research2.py
-HEADER_FONT_SIZE = 12
-FIELD_FONT_SIZE = 10
+HEADER_FONT_SIZE = 10
+FIELD_FONT_SIZE = 8
 
 
 def fill_company_research1(prs: Presentation, payload: dict):
@@ -144,18 +144,18 @@ def _add_field_bullet(tf, key: str, value, level: int) -> None:
 
     if is_url:
         runs = [
-            {"text": f"{key}: ", "link": None},
+            {"text": f"• {key}: ", "link": None},
             {"text": value_str, "link": value},
         ]
         _add_bullet_runs(tf, runs, level=level, size=FIELD_FONT_SIZE)
     else:
-        runs = [{"text": f"{key}: {value_str}", "link": None}]
+        runs = [{"text": f"• {key}: {value_str}", "link": None}]
         _add_bullet_runs(tf, runs, level=level, size=FIELD_FONT_SIZE)
 
 
 def _add_simple_bullet(tf, text: str, level: int, size: int) -> None:
     """Add a simple bullet point without key-value formatting."""
-    runs = [{"text": text, "link": None}]
+    runs = [{"text": f"• {text}", "link": None}]
     _add_bullet_runs(tf, runs, level=level, size=size)
 
 

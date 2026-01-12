@@ -25,46 +25,97 @@ PREFERRED_HEADER_ORDER = [
 ]
 
 
-def is_valuemap_format(data: dict) -> bool:
+def is_valuemap_format(data) -> bool:
     """
-    Check if the data is in ValueMap format (has BenefitTable key).
+    Check if the data is in ValueMap format.
+
+    Supports multiple formats:
+    - Direct array of objects: [{...}, {...}]
+    - Dict with BenefitTable key: {"BenefitTable": [...]}
+    - Dict with any key containing a list of objects
 
     Args:
-        data: Dictionary to check
+        data: Data to check (dict or list)
 
     Returns:
-        True if data contains BenefitTable key with a list value
+        True if data contains valid table data
     """
-    if not isinstance(data, dict):
-        return False
-    benefit_table = data.get("BenefitTable")
-    return isinstance(benefit_table, list)
+    # Direct array of objects
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        return True
+    # Dict with BenefitTable or any list of objects
+    if isinstance(data, dict):
+        if "BenefitTable" in data and isinstance(data["BenefitTable"], list):
+            return True
+        # Check for any key containing a list of objects
+        for v in data.values():
+            if isinstance(v, list) and v and isinstance(v[0], dict):
+                return True
+    return False
+
+
+def _extract_benefit_table(data) -> list[dict] | None:
+    """
+    Extract the benefit table data from various input formats.
+
+    Supports:
+    - Direct array: [{...}, {...}]
+    - Dict with BenefitTable: {"BenefitTable": [...]}
+    - Dict with any list of objects (fallback)
+
+    Args:
+        data: Input data (dict or list)
+
+    Returns:
+        List of row dictionaries, or None if no valid data found
+    """
+    # Direct array of objects
+    if isinstance(data, list):
+        if data and isinstance(data[0], dict):
+            return data
+        return None
+
+    # Dict with BenefitTable key (preferred)
+    if isinstance(data, dict):
+        if "BenefitTable" in data:
+            bt = data["BenefitTable"]
+            if isinstance(bt, list) and bt:
+                return bt
+        # Fallback: find first list of objects
+        for v in data.values():
+            if isinstance(v, list) and v and isinstance(v[0], dict):
+                return v
+
+    return None
 
 
 def transform_valuemap_to_industry_research(
-    valuemap: dict,
+    valuemap,
     company_name: str = "",
 ) -> dict:
     """
-    Transform ValueMap BenefitTable into IndustryResearch format.
+    Transform ValueMap into IndustryResearch format.
+
+    Supports multiple input formats including direct arrays and wrapped objects.
 
     Args:
-        valuemap: Dictionary containing BenefitTable array
+        valuemap: Data containing benefit table (dict or list)
         company_name: Optional company name for title generation
 
     Returns:
-        Dictionary with title, headers, and rows keys
-
-    Raises:
-        ValueError: If BenefitTable is missing or empty
+        Dictionary with title, headers, and rows keys.
+        Returns minimal valid structure if no data found.
     """
-    benefit_table = valuemap.get("BenefitTable")
+    benefit_table = _extract_benefit_table(valuemap)
 
-    if not isinstance(benefit_table, list):
-        raise ValueError("ValueMap must contain a 'BenefitTable' array")
-
+    # Return minimal valid structure if no data found
     if not benefit_table:
-        raise ValueError("BenefitTable array is empty")
+        logging.warning("No valid benefit table data found in ValueMap")
+        return {
+            "title": _generate_title(company_name),
+            "headers": [],
+            "rows": [],
+        }
 
     # Extract headers from first row, excluding complex nested objects
     headers = _extract_headers(benefit_table[0])

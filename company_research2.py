@@ -85,13 +85,13 @@ def _add_field_bullet(tf, key: str, value) -> None:
     if is_url:
         # Make source links clickable
         runs = [
-            {"text": f"{key}: ", "link": None},
+            {"text": f"• {key}: ", "link": None},
             {"text": formatted_value, "link": value},
         ]
         _add_bullet_runs(tf, runs, level=1, size=FIELD_FONT_SIZE)
     else:
         # Regular field
-        runs = [{"text": f"{key}: {formatted_value}", "link": None}]
+        runs = [{"text": f"• {key}: {formatted_value}", "link": None}]
         _add_bullet_runs(tf, runs, level=1, size=FIELD_FONT_SIZE)
 
 

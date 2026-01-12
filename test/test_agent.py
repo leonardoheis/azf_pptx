@@ -126,10 +126,16 @@ def test_is_valuemap_format_without_benefit_table():
 
 
 def test_is_valuemap_format_with_non_dict():
-    """Test detection returns False for non-dict."""
+    """Test detection returns False for invalid types."""
     assert is_valuemap_format("not a dict") is False
     assert is_valuemap_format(None) is False
-    assert is_valuemap_format([]) is False
+    assert is_valuemap_format([]) is False  # Empty list
+
+
+def test_is_valuemap_format_with_direct_array():
+    """Test detection returns True for direct array of objects."""
+    direct_array = [{"Challenge": "Test", "Description": "Desc"}]
+    assert is_valuemap_format(direct_array) is True
 
 
 def test_transform_valuemap_basic():
@@ -193,23 +199,36 @@ def test_transform_valuemap_empty_company_name():
     assert result["title"] == "Value Map Benefit Table"
 
 
-def test_transform_valuemap_empty_benefit_table_raises():
-    """Test that empty BenefitTable raises ValueError."""
+def test_transform_valuemap_empty_benefit_table_returns_minimal():
+    """Test that empty BenefitTable returns minimal valid structure."""
     valuemap = {"BenefitTable": []}
 
-    try:
-        transform_valuemap_to_industry_research(valuemap)
-        assert False, "Expected ValueError"
-    except ValueError as e:
-        assert "empty" in str(e).lower()
+    result = transform_valuemap_to_industry_research(valuemap)
+    assert result["title"] == "Value Map Benefit Table"
+    assert result["headers"] == []
+    assert result["rows"] == []
 
 
-def test_transform_valuemap_missing_benefit_table_raises():
-    """Test that missing BenefitTable raises ValueError."""
+def test_transform_valuemap_missing_benefit_table_returns_minimal():
+    """Test that missing BenefitTable returns minimal valid structure."""
     valuemap = {"SomeOtherKey": []}
 
-    try:
-        transform_valuemap_to_industry_research(valuemap)
-        assert False, "Expected ValueError"
-    except ValueError as e:
-        assert "BenefitTable" in str(e)
+    result = transform_valuemap_to_industry_research(valuemap)
+    assert result["title"] == "Value Map Benefit Table"
+    assert result["headers"] == []
+    assert result["rows"] == []
+
+
+def test_transform_valuemap_direct_array():
+    """Test that direct array format works without BenefitTable wrapper."""
+    valuemap = [
+        {"Challenge": "Test Challenge", "Description": "Test Description"},
+        {"Challenge": "Another Challenge", "Description": "Another Description"},
+    ]
+
+    result = transform_valuemap_to_industry_research(valuemap)
+    assert result["title"] == "Value Map Benefit Table"
+    assert "Challenge" in result["headers"]
+    assert "Description" in result["headers"]
+    assert len(result["rows"]) == 2
+    assert result["rows"][0]["Challenge"] == "Test Challenge"
